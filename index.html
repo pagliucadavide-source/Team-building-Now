@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>NEXUS</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
@@ -15,28 +15,75 @@
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useCallback } = React;
 
-// ─── localStorage wrapper (replaces window.storage for Vercel compatibility) ──
-const storage = {
-  get: async (key) => {
-    try { const v = localStorage.getItem(key); return v ? { value: v } : null; } catch { return null; }
-  },
-  set: async (key, value) => {
-    try { localStorage.setItem(key, value); return { key, value }; } catch { return null; }
-  },
-  delete: async (key) => {
-    try { localStorage.removeItem(key); return { key, deleted: true }; } catch { return null; }
-  },
-  list: async (prefix) => {
-    try {
-      const keys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!prefix || k.startsWith(prefix)) keys.push(k);
-      }
-      return { keys };
-    } catch { return { keys: [] }; }
-  },
-};
+// ─── Cloud storage via /api/store (Vercel KV proxy) + localStorage fallback ───
+const storage = (() => {
+  // Use /api/store on Vercel, localStorage everywhere else
+  // Always try cloud storage first (works on Vercel and any deployed environment)
+  // Only use localStorage if running on localhost/Claude preview
+  const isVercel = typeof window === "undefined" || 
+    !window.location.hostname.includes("localhost") && 
+    !window.location.hostname.includes("127.0.0.1") &&
+    !window.location.hostname.includes("claude.ai");
+
+  const local = {
+    get: async (key) => {
+      try { const v = localStorage.getItem(key); return v ? { value: v } : null; } catch { return null; }
+    },
+    set: async (key, value) => {
+      try { localStorage.setItem(key, value); return { key, value }; } catch { return null; }
+    },
+    delete: async (key) => {
+      try { localStorage.removeItem(key); return { key, deleted: true }; } catch { return null; }
+    },
+    list: async (prefix) => {
+      try {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!prefix || k.startsWith(prefix)) keys.push(k);
+        }
+        return { keys };
+      } catch { return { keys: [] }; }
+    },
+  };
+
+  const cloud = {
+    get: async (key) => {
+      try {
+        const r = await fetch(`/api/store?key=${encodeURIComponent(key)}`);
+        if (!r.ok) return null;
+        const d = await r.json();
+        return d.value !== undefined ? { value: d.value } : null;
+      } catch { return null; }
+    },
+    set: async (key, value) => {
+      try {
+        const r = await fetch("/api/store", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, value }),
+        });
+        return r.ok ? { key, value } : null;
+      } catch { return null; }
+    },
+    delete: async (key) => {
+      try {
+        const r = await fetch(`/api/store?key=${encodeURIComponent(key)}`, { method: "DELETE" });
+        return r.ok ? { key, deleted: true } : null;
+      } catch { return null; }
+    },
+    list: async (prefix) => {
+      try {
+        const url = prefix ? `/api/store?list=1&prefix=${encodeURIComponent(prefix)}` : "/api/store?list=1";
+        const r = await fetch(url);
+        if (!r.ok) return { keys: [] };
+        return await r.json();
+      } catch { return { keys: [] }; }
+    },
+  };
+
+  return isVercel ? cloud : local;
+})();
 
 // ─── Haversine distance (meters) ────────────────────────────────────────────
 function haversine(lat1, lon1, lat2, lon2) {

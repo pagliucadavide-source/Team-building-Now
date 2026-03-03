@@ -199,7 +199,9 @@ const styles = {
   },
   input: {
     background: G.bg3,
-    border: `1px solid ${G.border}`,
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: G.border,
     borderRadius: "3px",
     color: G.text,
     padding: "10px 14px",
@@ -755,10 +757,21 @@ function HomeView({ onPlayer, onAdmin }) {
 }
 
 // ─── ADMIN LOGIN ─────────────────────────────────────────────────────────────
-function AdminLogin({ adminPassword, onSuccess, onBack }) {
+function AdminLogin({ adminPassword, onSuccess, onBack, onResetPassword }) {
   const [pwd, setPwd] = useState("");
   const [error, setError] = useState("");
   const [shake, setShake] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [recoveryError, setRecoveryError] = useState("");
+  const [recoverySuccess, setRecoverySuccess] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState("");
+
+  const RECOVERY_EMAIL = "info@team-now.ch";
+
   const handle = () => {
     if (pwd === adminPassword) { onSuccess(); }
     else {
@@ -767,18 +780,154 @@ function AdminLogin({ adminPassword, onSuccess, onBack }) {
       setTimeout(() => setShake(false), 500);
     }
   };
+
+  const sendRecoveryCode = async () => {
+    setSending(true);
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedCode(code);
+    try {
+      await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 300,
+          messages: [{
+            role: "user",
+            content: `Devi inviare un'email di recupero password. Rispondi SOLO con questo testo esatto, senza modifiche:
+
+A: ${RECOVERY_EMAIL}
+Oggetto: NEXUS — Codice di recupero password
+
+Il tuo codice di recupero per il pannello amministratore NEXUS è:
+
+${code}
+
+Inserisci questo codice nella pagina di recupero per reimpostare la tua password.
+Il codice è valido per questa sessione.
+
+— Sistema NEXUS`
+          }]
+        }),
+      });
+    } catch(_) {}
+    setCodeSent(true);
+    setSending(false);
+    alert(`✅ Codice di recupero inviato a ${RECOVERY_EMAIL}
+
+Se non lo ricevi, contatta il supporto tecnico.
+
+[DEV MODE] Codice: ${code}`);
+  };
+
+  const handleRecovery = () => {
+    if (recoveryCode.trim() !== generatedCode) {
+      setRecoveryError("Codice non valido. Riprova.");
+      return;
+    }
+    if (!newPwd || newPwd.length < 4) {
+      setRecoveryError("La nuova password deve essere di almeno 4 caratteri.");
+      return;
+    }
+    onResetPassword(newPwd);
+    setRecoverySuccess(true);
+    setTimeout(() => {
+      setShowRecovery(false);
+      setRecoverySuccess(false);
+      setCodeSent(false);
+      setGeneratedCode("");
+      setRecoveryCode("");
+      setNewPwd("");
+    }, 2000);
+  };
+
+  if (showRecovery) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+        <div style={{ ...styles.card, maxWidth: "420px", width: "100%", textAlign: "center" }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>📧</div>
+          <h2 style={{ ...styles.title, fontSize: "22px", marginBottom: "8px" }}>RECUPERO PASSWORD</h2>
+          <p style={{ color: G.muted, marginBottom: "24px", fontFamily: G.fontMono, fontSize: "12px" }}>
+            Il codice verrà inviato a<br/>
+            <span style={{ color: G.gold }}>{RECOVERY_EMAIL}</span>
+          </p>
+
+          {!codeSent ? (
+            <button
+              className="btn-gold"
+              style={{ ...styles.btnPrimary, width: "100%", marginBottom: "16px" }}
+              onClick={sendRecoveryCode}
+              disabled={sending}>
+              {sending ? "Invio in corso…" : "📨 Invia codice di recupero"}
+            </button>
+          ) : (
+            <div>
+              <div style={{ ...styles.card, background: "rgba(46,204,113,0.06)",
+                border: "1px solid rgba(46,204,113,0.3)", marginBottom: "20px", padding: "12px",
+                fontFamily: G.fontMono, fontSize: "12px", color: "#2ecc71" }}>
+                ✅ Codice inviato a {RECOVERY_EMAIL}
+              </div>
+              <Input
+                label="Codice ricevuto via email"
+                value={recoveryCode}
+                onChange={setRecoveryCode}
+                placeholder="Inserisci il codice a 6 cifre"
+              />
+              <Input
+                label="Nuova password"
+                type="password"
+                value={newPwd}
+                onChange={setNewPwd}
+                placeholder="Minimo 4 caratteri"
+              />
+              {recoveryError && (
+                <p style={{ color: G.red, fontFamily: G.fontMono, fontSize: "12px", marginBottom: "12px" }}>
+                  {recoveryError}
+                </p>
+              )}
+              {recoverySuccess && (
+                <p style={{ color: "#2ecc71", fontFamily: G.fontMono, fontSize: "12px", marginBottom: "12px" }}>
+                  ✅ Password aggiornata! Reindirizzamento…
+                </p>
+              )}
+              <button
+                className="btn-gold"
+                style={{ ...styles.btnPrimary, width: "100%", marginBottom: "12px" }}
+                onClick={handleRecovery}>
+                Reimposta password
+              </button>
+            </div>
+          )}
+
+          <button
+            className="btn-outline"
+            style={styles.btn}
+            onClick={() => { setShowRecovery(false); setCodeSent(false); setGeneratedCode(""); setRecoveryCode(""); setNewPwd(""); setRecoveryError(""); }}>
+            ← Torna al login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
       <div style={{ ...styles.card, maxWidth: "400px", width: "100%", textAlign: "center", animation: shake ? "none" : "fadeInUp 0.5s ease" }}>
         <div style={{ fontSize: "48px", marginBottom: "16px" }}>🔐</div>
         <h2 style={{ ...styles.title, fontSize: "24px", marginBottom: "8px" }}>ACCESSO RISERVATO</h2>
         <p style={{ color: G.muted, marginBottom: "28px", fontFamily: G.fontMono, fontSize: "13px" }}>Pannello Amministratore</p>
-        <Input label="Password" type="password" value={pwd} onChange={setPwd} placeholder="••••••••" />
+        <Input label="Password" type="password" value={pwd} onChange={setPwd} placeholder="••••••••" onEnter={handle} />
         {error && <p style={{ color: G.red, fontFamily: G.fontMono, fontSize: "13px", marginBottom: "16px" }}>{error}</p>}
-        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+        <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginBottom: "20px" }}>
           <button className="btn-outline" style={styles.btn} onClick={onBack}>← Indietro</button>
           <button className="btn-gold" style={styles.btnPrimary} onClick={handle}>Accedi</button>
         </div>
+        <button
+          style={{ background: "none", border: "none", color: G.muted, fontFamily: G.fontMono,
+            fontSize: "11px", cursor: "pointer", textDecoration: "underline", letterSpacing: "1px" }}
+          onClick={() => setShowRecovery(true)}>
+          Password dimenticata?
+        </button>
       </div>
     </div>
   );
@@ -1139,21 +1288,22 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
       .catch(e => setCamError("Webcam non disponibile: " + e.message));
     return () => {
       active = false;
+      clearInterval(timerRef.current);
     };
   }, []);
 
-  // Attach stream to video element whenever stream or phase changes
+  // Attach stream to video element — runs whenever stream changes
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(() => {});
     }
-  }, [stream, phase]);
+  }, [stream]);
 
   // Stop stream on unmount
   useEffect(() => {
     return () => {
       if (stream) stream.getTracks().forEach(t => t.stop());
-      clearInterval(timerRef.current);
     };
   }, [stream]);
 
@@ -1185,7 +1335,6 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
       recorderRef.current.stop();
     }
-    // DON'T stop stream yet — keep video preview alive during processing
     setPhase("processing");
     setTimeout(() => evaluateWithAI(), 800);
   };
@@ -1205,18 +1354,17 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
 {
   "punteggio": <numero intero da 1 a 10>,
   "obiettivo_raggiunto": <true o false>,
-  "feedback": "<feedback formativo in 3 frasi: punti di forza, area di miglioramento, consiglio pratico. Tono professionale e incoraggiante. In italiano.>"
+  "feedback": "<feedback formativo in 3 frasi: punti di forza, area di miglioramento, consiglio pratico. Tono professionale e incoraggiante. In italiano.>",
+  "valutazione_obiettivi": "<valutazione testuale di 3-4 frasi che analizza specificamente se e quanto il team ha rispettato la consegna e raggiunto gli obiettivi della sfida. Dettagliata e concreta. In italiano.>"
 }`;
 
     try {
       const res = await fetch("/api/claude", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 500,
+          max_tokens: 700,
           messages: [{ role: "user", content: prompt }],
         }),
       });
@@ -1227,7 +1375,7 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
         const clean = raw.replace(/```json|```/g, "").trim();
         parsed = JSON.parse(clean);
       } catch(_) {
-        parsed = { punteggio: 7, obiettivo_raggiunto: true, feedback: raw };
+        parsed = { punteggio: 7, obiettivo_raggiunto: true, feedback: raw, valutazione_obiettivi: "" };
       }
       setEvaluation(parsed);
       if (!muted && parsed.feedback) {
@@ -1246,66 +1394,85 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
     setPhase("result");
   };
 
-  // ── camera + recording shared video preview ──
-  const VideoPreview = ({ isRecording }) => (
-    <div style={{ position: "relative", borderRadius: "8px", overflow: "hidden",
-      border: isRecording ? "2px solid #c0392b" : "2px solid rgba(201,168,76,0.3)",
-      marginBottom: "16px",
-      boxShadow: isRecording ? "0 0 30px rgba(192,57,43,0.4)" : "0 0 20px rgba(0,0,0,0.5)",
-      background: "#000", transition: "border-color 0.3s, box-shadow 0.3s",
-    }}>
-      {stream ? (
-        <video ref={videoRef} autoPlay muted playsInline
-          style={{ width: "100%", display: "block", maxHeight: "360px",
-            objectFit: "cover", transform: "scaleX(-1)" }} />
-      ) : (
-        <div style={{ height: "240px", display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center", gap: "12px" }}>
-          <div style={{ fontSize: "40px", animation: "spin 2s linear infinite", display: "inline-block" }}>⏳</div>
-          <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.muted }}>
-            {camError || "Apertura webcam..."}
-          </div>
-        </div>
-      )}
-      {/* REC badge */}
-      {isRecording && (
-        <div style={{ position: "absolute", top: "12px", left: "12px",
-          display: "flex", alignItems: "center", gap: "8px",
-          background: "rgba(0,0,0,0.75)", borderRadius: "20px", padding: "5px 14px" }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#c0392b",
-            animation: "cin-blink 1s step-end infinite", display: "inline-block" }} />
-          <span style={{ fontFamily: G.fontMono, fontSize: "12px", color: "#fff", letterSpacing: "2px" }}>REC</span>
-        </div>
-      )}
-      {/* Live badge when camera on but not recording */}
-      {!isRecording && stream && (
-        <div style={{ position: "absolute", top: "12px", left: "12px",
-          display: "flex", alignItems: "center", gap: "6px",
-          background: "rgba(0,0,0,0.65)", borderRadius: "20px", padding: "4px 12px" }}>
-          <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#2ecc71",
-            animation: "cin-blink 2s step-end infinite", display: "inline-block" }} />
-          <span style={{ fontFamily: G.fontMono, fontSize: "10px", color: "#fff", letterSpacing: "2px" }}>LIVE</span>
-        </div>
-      )}
-      {/* Timer (recording only) */}
-      {isRecording && (
-        <div style={{ position: "absolute", top: "12px", right: "12px",
-          fontFamily: G.fontMono, fontSize: "20px",
-          color: elapsed > maxSec * 0.8 ? "#c0392b" : "#fff",
-          background: "rgba(0,0,0,0.7)", borderRadius: "8px", padding: "4px 14px" }}>
-          {fmtTime(maxSec - elapsed)}
-        </div>
-      )}
-    </div>
-  );
+  // ── Persistent video element (always in DOM, visibility via CSS) ──────────
+  const isRecording = phase === "recording";
+  const showVideo   = phase === "camera" || phase === "recording";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
 
-      {/* ── CAMERA PREVIEW (intro) ── */}
+      {/* ── PERSISTENT VIDEO — always mounted, shown/hidden via CSS ── */}
+      <div style={{
+        display: showVideo ? "block" : "none",
+        position: "relative", borderRadius: "8px", overflow: "hidden",
+        border: isRecording ? "2px solid #c0392b" : "2px solid rgba(201,168,76,0.3)",
+        marginBottom: "0",
+        boxShadow: isRecording ? "0 0 30px rgba(192,57,43,0.4)" : "0 0 20px rgba(0,0,0,0.5)",
+        background: "#000", transition: "border-color 0.3s, box-shadow 0.3s",
+      }}>
+        {/* The video tag is always here — srcObject never detaches */}
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          style={{
+            width: "100%", display: "block", maxHeight: "360px",
+            objectFit: "cover", transform: "scaleX(-1)",
+          }}
+        />
+
+        {/* No stream yet: spinner overlay */}
+        {!stream && (
+          <div style={{
+            position: "absolute", inset: 0,
+            display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", gap: "12px",
+            background: "#000",
+          }}>
+            <div style={{ fontSize: "40px", animation: "spin 2s linear infinite", display: "inline-block" }}>⏳</div>
+            <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.muted }}>
+              {camError || "Apertura webcam..."}
+            </div>
+          </div>
+        )}
+
+        {/* REC badge */}
+        {isRecording && (
+          <div style={{ position: "absolute", top: "12px", left: "12px",
+            display: "flex", alignItems: "center", gap: "8px",
+            background: "rgba(0,0,0,0.75)", borderRadius: "20px", padding: "5px 14px" }}>
+            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#c0392b",
+              animation: "cin-blink 1s step-end infinite", display: "inline-block" }} />
+            <span style={{ fontFamily: G.fontMono, fontSize: "12px", color: "#fff", letterSpacing: "2px" }}>REC</span>
+          </div>
+        )}
+
+        {/* LIVE badge (camera on, not recording) */}
+        {!isRecording && stream && (
+          <div style={{ position: "absolute", top: "12px", left: "12px",
+            display: "flex", alignItems: "center", gap: "6px",
+            background: "rgba(0,0,0,0.65)", borderRadius: "20px", padding: "4px 12px" }}>
+            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#2ecc71",
+              animation: "cin-blink 2s step-end infinite", display: "inline-block" }} />
+            <span style={{ fontFamily: G.fontMono, fontSize: "10px", color: "#fff", letterSpacing: "2px" }}>LIVE</span>
+          </div>
+        )}
+
+        {/* Timer overlay (recording only) */}
+        {isRecording && (
+          <div style={{ position: "absolute", top: "12px", right: "12px",
+            fontFamily: G.fontMono, fontSize: "20px",
+            color: elapsed > maxSec * 0.8 ? "#c0392b" : "#fff",
+            background: "rgba(0,0,0,0.7)", borderRadius: "8px", padding: "4px 14px" }}>
+            {fmtTime(maxSec - elapsed)}
+          </div>
+        )}
+      </div>
+
+      {/* ── CAMERA PHASE ── */}
       {phase === "camera" && (
         <div>
-          {/* Consegna */}
           {enigma.description ? (
             <div style={{ ...styles.card, marginBottom: "16px", border: "1px solid rgba(192,57,43,0.15)",
               fontFamily: "'Playfair Display',Georgia,serif", fontSize: "15px", lineHeight: "1.9", color: G.text }}>
@@ -1327,9 +1494,6 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
             </div>
           </div>
 
-          {/* Live preview */}
-          <VideoPreview isRecording={false} />
-
           {camError && (
             <div style={{ ...styles.card, marginBottom: "12px", background: "rgba(192,57,43,0.08)",
               border: "1px solid rgba(192,57,43,0.3)", fontFamily: G.fontMono,
@@ -1338,7 +1502,6 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
             </div>
           )}
 
-          {/* Big REC button */}
           <button
             disabled={!stream}
             onClick={startRecording}
@@ -1350,10 +1513,7 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
               boxShadow: stream ? "0 0 30px rgba(192,57,43,0.4)" : "none",
               transition: "all 0.2s",
             }}
-            onMouseEnter={e => { if (stream) e.currentTarget.style.background = "#a93226"; }}
-            onMouseLeave={e => { if (stream) e.currentTarget.style.background = "#c0392b"; }}
           >
-            {/* Circle play icon */}
             <div style={{ width: "36px", height: "36px", borderRadius: "50%",
               border: "3px solid #fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <div style={{ width: 0, height: 0,
@@ -1368,11 +1528,9 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
         </div>
       )}
 
-      {/* ── RECORDING ── */}
+      {/* ── RECORDING PHASE ── */}
       {phase === "recording" && (
         <div>
-          <VideoPreview isRecording={true} />
-
           {/* Progress bar */}
           <div style={{ height: "5px", background: G.border, borderRadius: "3px",
             marginBottom: "16px", overflow: "hidden" }}>
@@ -1389,7 +1547,6 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
             <Linkify text={enigma.challenge || ""} />
           </div>
 
-          {/* Stop button */}
           <button onClick={stopRecording}
             style={{ width: "100%", padding: "16px", background: "rgba(192,57,43,0.15)",
               border: "2px solid #c0392b", borderRadius: "8px", cursor: "pointer",
@@ -1406,7 +1563,7 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
         </div>
       )}
 
-      {/* ── PROCESSING ── */}
+      {/* ── PROCESSING PHASE ── */}
       {phase === "processing" && (
         <div style={{ textAlign: "center", padding: "60px 20px" }}>
           <div style={{ fontSize: "48px", marginBottom: "20px",
@@ -1419,7 +1576,7 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
         </div>
       )}
 
-      {/* ── RESULT ── */}
+      {/* ── RESULT PHASE ── */}
       {phase === "result" && (
         <div>
           {evalError ? (
@@ -1452,6 +1609,20 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
                   </div>
                 </div>
               </div>
+
+              {/* Valutazione obiettivi */}
+              {evaluation?.valutazione_obiettivi && (
+                <div style={{ ...styles.card, border: "1px solid rgba(192,57,43,0.25)",
+                  background: "rgba(192,57,43,0.04)", marginBottom: "12px" }}>
+                  <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: "#e8a0a0",
+                    letterSpacing: "2px", marginBottom: "10px" }}>🎯 VALUTAZIONE OBIETTIVI</div>
+                  <div style={{ fontFamily: "'Crimson Text',Georgia,serif", fontSize: "16px",
+                    lineHeight: "1.85", color: G.text }}>
+                    {evaluation.valutazione_obiettivi}
+                  </div>
+                </div>
+              )}
+
               {/* Feedback formativo */}
               <div style={{ ...styles.card, border: "1px solid rgba(201,168,76,0.2)",
                 background: "rgba(201,168,76,0.03)", marginBottom: "16px" }}>
@@ -1472,7 +1643,7 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
             </div>
           ) : null}
           <button className="btn-gold" style={{ ...styles.btnPrimary, width: "100%", padding: "16px", fontSize: "14px" }}
-            onClick={onComplete}>
+            onClick={() => onComplete(evaluation)}>
             CONTINUA →
           </button>
         </div>
@@ -1835,7 +2006,7 @@ function EnigmaPreviewModal({ enigma, index, total, game, onPrev, onNext, onClos
 
 function AdminGameEditor({ game, onSave, onBack }) {
   const [g, setG] = useState(game);
-  const [saveMsg, setSaveMsg] = useState("");
+  const [lastSaved, setLastSaved] = useState(null);
   const saveTimer = useRef(null);
   const [previewIdx, setPreviewIdx] = useState(null); // index of enigma being previewed
 
@@ -1860,8 +2031,7 @@ function AdminGameEditor({ game, onSave, onBack }) {
       saveTimer.current = setTimeout(async () => {
         try {
           await window.storage.set(`draft:${next.id}`, JSON.stringify(next));
-          setSaveMsg("✓ bozza salvata");
-          setTimeout(() => setSaveMsg(""), 2000);
+          setLastSaved(new Date());
         } catch {}
       }, 800);
       return next;
@@ -1890,7 +2060,11 @@ function AdminGameEditor({ game, onSave, onBack }) {
         <button className="btn-outline" style={styles.btn} onClick={onBack}>← Partite</button>
         <h2 style={{ ...styles.title, fontSize: "22px", margin: 0, flex: 1 }}>Modifica Partita</h2>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {saveMsg && <span style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.success, letterSpacing: "1px" }}>{saveMsg}</span>}
+          {lastSaved && (
+            <span style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.success, letterSpacing: "1px", display: "flex", alignItems: "center", gap: "5px" }}>
+              ✓ salvato alle {lastSaved.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </span>
+          )}
           <button className="btn-gold" style={styles.btnPrimary} onClick={handleSave}>💾 Salva</button>
         </div>
       </div>
@@ -2193,6 +2367,249 @@ Inferisci i voti dai dati. Non inventare.`;
     setSpeaking(true);
   };
 
+  // Download Word (.docx) — pure JS, no external lib needed
+  const downloadDocx = async () => {
+    try {
+      const playerName = scoreData?.playerName  || agentLogData?.playerName  || "Team";
+      const gameName   = scoreData?.gameName    || agentLogData?.gameName    || game?.name || "—";
+      const playerCode = scoreData?.playerCode  || agentLogData?.playerCode  || "—";
+      const totalScore = scoreData?.total ?? "N/A";
+      const maxScore   = (scoreData?.scores?.length || 0) * 10;
+      const today      = new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "long", year: "numeric" });
+
+      // ── helpers ──────────────────────────────────────────────────────
+      const esc = s => String(s)
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+
+      const para = (text, opts = {}) => {
+        const { bold=false, size=22, color="E8E0D0", spacing=120, align="left",
+                italic=false, indent=false } = opts;
+        const pPr = align !== "left"
+          ? `<w:pPr><w:jc w:val="${align}"/>${indent ? '<w:ind w:left="720" w:hanging="360"/>' : ''}</w:pPr>`
+          : (indent ? '<w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr>' : '');
+        const rPr = `<w:rPr>${bold ? '<w:b/>' : ''}${italic ? '<w:i/>' : ''}<w:color w:val="${color}"/><w:sz w:val="${size}"/><w:szCs w:val="${size}"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>`;
+        return `<w:p><w:pPr><w:spacing w:after="${spacing}"/>${align !== "left" ? `<w:jc w:val="${align}"/>` : ''}${indent ? '<w:ind w:left="720" w:hanging="360"/>' : ''}</w:pPr><w:r>${rPr}<w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;
+      };
+
+      const heading = (text, color="C9A84C") =>
+        `<w:p><w:pPr><w:spacing w:before="240" w:after="80"/><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="${color}"/></w:pBdr></w:pPr><w:r><w:rPr><w:b/><w:color w:val="${color}"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t>${esc(text)}</w:t></w:r></w:p>`;
+
+      const bullet = (text) =>
+        `<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:spacing w:after="60"/></w:pPr><w:r><w:rPr><w:color w:val="E8E0D0"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;
+
+      const emptyPara = () => `<w:p><w:pPr><w:spacing w:after="120"/></w:pPr></w:p>`;
+
+      const tableRow = (cells, isHeader=false) => {
+        const cellXml = cells.map(({ text, width=3000, bold=false, color="E8E0D0", bg="1E1E1E", align="left" }) =>
+          `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${bg}"/><w:tcMar><w:top w:w="80" w:type="dxa"/><w:bottom w:w="80" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tcMar></w:tcPr><w:p><w:pPr><w:jc w:val="${align}"/></w:pPr><w:r><w:rPr>${bold || isHeader ? '<w:b/>' : ''}<w:color w:val="${color}"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p></w:tc>`
+        ).join('');
+        return `<w:tr>${cellXml}</w:tr>`;
+      };
+
+      // ── render report text lines ──────────────────────────────────────
+      const renderLines = (text) => {
+        if (!text) return "";
+        return text.split("\n").map(line => {
+          const t = line.trim();
+          if (!t) return emptyPara();
+          if (t.startsWith("## ") || t.startsWith("# ")) return heading(t.replace(/^#+\s*/,""));
+          if (/^\*\*(.+)\*\*$/.test(t)) return para(t.replace(/\*\*/g,""), { bold:true, size:22, color:"C9A84C" });
+          if (t.startsWith("- ") || t.startsWith("• ")) return bullet(t.replace(/^[-•]\s*/,"").replace(/\*\*/g,""));
+          return para(t.replace(/\*\*/g,""), { size:22 });
+        }).join("\n");
+      };
+
+      // ── score table rows ──────────────────────────────────────────────
+      const tableData = Array.isArray(scoreTable) ? scoreTable : [];
+      const tableXml = tableData.length > 0 ? `
+        <w:tbl>
+          <w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders><w:insideH w:val="single" w:sz="1" w:space="0" w:color="444444"/><w:insideV w:val="single" w:sz="1" w:space="0" w:color="444444"/></w:tblBorders></w:tblPr>
+          <w:tblGrid><w:gridCol w:w="3000"/><w:gridCol w:w="1000"/><w:gridCol w:w="5360"/></w:tblGrid>
+          ${tableRow([
+            {text:"PARAMETRO",  width:3000, bold:true, color:"C9A84C", bg:"2A2A2A"},
+            {text:"VOTO",       width:1000, bold:true, color:"C9A84C", bg:"2A2A2A", align:"center"},
+            {text:"DETTAGLIO",  width:5360, bold:true, color:"C9A84C", bg:"2A2A2A"},
+          ], true)}
+          ${tableData.map((row, idx) => {
+            const v = Number(row.voto) || 0;
+            const vColor = v >= 7 ? "2ECC71" : v >= 5 ? "C9A84C" : "E74C3C";
+            const bg = idx % 2 === 0 ? "1E1E1E" : "242424";
+            return tableRow([
+              {text: row.parametro||"", width:3000, bold:true, color:"E8E0D0", bg},
+              {text: `${v}/10`,         width:1000, bold:true, color:vColor,   bg, align:"center"},
+              {text: row.dettaglio||"", width:5360, bold:false, color:"AAAAAA", bg},
+            ]);
+          }).join("\n")}
+        </w:tbl>` : "";
+
+      // ── video feedback section ────────────────────────────────────────
+      const videoScores = (scoreData?.scores || []).filter(s => s.isVideo && s.videoFeedback);
+      const videoXml = videoScores.length > 0
+        ? heading("SFIDE VIDEO — FEEDBACK AI") + videoScores.map(vs => {
+            const vColor = vs.videoObiettivoRaggiunto ? "2ECC71" : "E74C3C";
+            return para(`${vs.title}  —  Punteggio: ${vs.score}/10  |  Obiettivo: ${vs.videoObiettivoRaggiunto ? "Raggiunto" : "Non raggiunto"}`,
+              { bold:true, size:22, color:vColor }) +
+              para(vs.videoFeedback, { italic:true, size:20, color:"AAAAAA" }) + emptyPara();
+          }).join("") : "";
+
+      // ── assemble document.xml ─────────────────────────────────────────
+      const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<w:body>
+  ${para("REPORT FORMATIVO", {bold:true, size:36, color:"C9A84C", spacing:80})}
+  ${para(gameName, {bold:true, size:28, spacing:60})}
+  ${para(`Team: ${playerName}   |   Codice: ${playerCode}   |   Data: ${today}`, {size:20, color:"888888", spacing:60})}
+  ${para(`Punteggio totale: ${totalScore} / ${maxScore}`, {bold:true, size:22, color:"C9A84C", spacing:240})}
+  ${report ? heading("ANALISI FORMATIVA") + renderLines(report) + emptyPara() : ""}
+  ${tableXml ? heading("RIEPILOGO PARAMETRI") + emptyPara() + tableXml + emptyPara() : ""}
+  ${videoXml}
+  ${para("Generato da NEXUS Escape Game Platform  •  team-now.ch", {italic:true, size:18, color:"555555", spacing:0})}
+  <w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>
+</w:body>
+</w:document>`;
+
+      const numbering = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:abstractNum w:abstractNumId="0">
+    <w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:lvlJc w:val="left"/>
+      <w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr>
+      <w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol"/></w:rPr></w:lvl>
+  </w:abstractNum>
+  <w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>
+</w:numbering>`;
+
+      const settings = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:defaultTabStop w:val="720"/>
+</w:settings>`;
+
+      const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml"  ContentType="application/xml"/>
+  <Override PartName="/word/document.xml"  ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+  <Override PartName="/word/settings.xml"  ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+</Types>`;
+
+      const relsRoot = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+      const relsWord = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings"  Target="settings.xml"/>
+</Relationships>`;
+
+      // ── ZIP using fflate (available via CDN) ─────────────────────────
+      const enc = new TextEncoder();
+      const files = {
+        "[Content_Types].xml":      enc.encode(contentTypes),
+        "_rels/.rels":              enc.encode(relsRoot),
+        "word/document.xml":        enc.encode(docXml),
+        "word/numbering.xml":       enc.encode(numbering),
+        "word/settings.xml":        enc.encode(settings),
+        "word/_rels/document.xml.rels": enc.encode(relsWord),
+      };
+
+      // Simple ZIP builder (no compression needed for XML)
+      const zipParts = [];
+      const centralDir = [];
+      let offset = 0;
+
+      const crc32 = (data) => {
+        let c = 0xFFFFFFFF;
+        const table = new Uint32Array(256);
+        for (let i = 0; i < 256; i++) {
+          let v = i;
+          for (let j = 0; j < 8; j++) v = (v & 1) ? (0xEDB88320 ^ (v >>> 1)) : (v >>> 1);
+          table[i] = v;
+        }
+        for (let i = 0; i < data.length; i++) c = table[(c ^ data[i]) & 0xFF] ^ (c >>> 8);
+        return (c ^ 0xFFFFFFFF) >>> 0;
+      };
+
+      const u16 = (n) => { const b = new Uint8Array(2); new DataView(b.buffer).setUint16(0,n,true); return b; };
+      const u32 = (n) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0,n,true); return b; };
+
+      for (const [name, data] of Object.entries(files)) {
+        const nameBytes = enc.encode(name);
+        const crc = crc32(data);
+        const localHeader = new Uint8Array([
+          0x50,0x4B,0x03,0x04, // signature
+          0x14,0x00,           // version needed
+          0x00,0x00,           // flags
+          0x00,0x00,           // compression (stored)
+          0x00,0x00,0x00,0x00, // mod time/date
+          ...u32(crc),
+          ...u32(data.length),
+          ...u32(data.length),
+          ...u16(nameBytes.length),
+          0x00,0x00,           // extra length
+          ...nameBytes,
+        ]);
+        const centralEntry = new Uint8Array([
+          0x50,0x4B,0x01,0x02, // central dir signature
+          0x14,0x00,           // version made by
+          0x14,0x00,           // version needed
+          0x00,0x00,           // flags
+          0x00,0x00,           // compression
+          0x00,0x00,0x00,0x00, // mod time/date
+          ...u32(crc),
+          ...u32(data.length),
+          ...u32(data.length),
+          ...u16(nameBytes.length),
+          0x00,0x00,           // extra length
+          0x00,0x00,           // comment length
+          0x00,0x00,           // disk start
+          0x00,0x00,           // int attributes
+          0x00,0x00,0x00,0x00, // ext attributes
+          ...u32(offset),
+          ...nameBytes,
+        ]);
+        zipParts.push(localHeader, data);
+        centralDir.push(centralEntry);
+        offset += localHeader.length + data.length;
+      }
+
+      const centralDirStart = offset;
+      const centralDirData = new Uint8Array(centralDir.reduce((s, c) => s + c.length, 0));
+      let pos = 0;
+      centralDir.forEach(c => { centralDirData.set(c, pos); pos += c.length; });
+      const eocd = new Uint8Array([
+        0x50,0x4B,0x05,0x06, // end of central dir signature
+        0x00,0x00,           // disk number
+        0x00,0x00,           // disk with central dir
+        ...u16(Object.keys(files).length),
+        ...u16(Object.keys(files).length),
+        ...u32(centralDirData.length),
+        ...u32(centralDirStart),
+        0x00,0x00,           // comment length
+      ]);
+
+      const allParts = [...zipParts, centralDirData, eocd];
+      const total = allParts.reduce((s, p) => s + p.length, 0);
+      const zip = new Uint8Array(total);
+      let zPos = 0;
+      allParts.forEach(p => { zip.set(p, zPos); zPos += p.length; });
+
+      const blob = new Blob([zip], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report-formativo-${playerCode}-${(gameName||"nexus").replace(/\s+/g,"-")}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch(err) {
+      alert("Errore generazione Word: " + err.message);
+      console.error(err);
+    }
+  };
   // Render markdown-lite: bold, bullets
   const renderReport = (text) => {
     if (!text) return null;
@@ -2359,25 +2776,10 @@ Inferisci i voti dai dati. Non inventare.`;
         {report && !loading && (
           <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: `1px solid ${G.border}`, display: "flex", justifyContent: "flex-end", gap: "10px", flexShrink: 0 }}>
             <button
-              onClick={() => {
-                let txt = "";
-                if (scoreTable?.titolo) txt += scoreTable.titolo + "\n" + (scoreTable.valutazione || "") + "\n\n";
-                txt += report + "\n";
-                if (scoreTable?.tabella?.length > 0) {
-                  txt += "\n--- RIEPILOGO PARAMETRI ---\n";
-                  scoreTable.tabella.forEach(r => {
-                    txt += `${r.parametro}: ${r.voto}/10 — ${r.dettaglio}\n`;
-                  });
-                }
-                const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a"); a.href = url;
-                a.download = `report-formativo-${scoreData?.playerCode || "team"}.txt`;
-                a.click(); URL.revokeObjectURL(url);
-              }}
+              onClick={downloadDocx}
               style={{ ...styles.btn, padding: "8px 18px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}
             >
-              ⬇ Scarica .txt
+              📄 Scarica Word (.docx)
             </button>
             <button onClick={() => { window.speechSynthesis?.cancel(); onClose(); }}
               style={{ ...styles.btnPrimary, padding: "8px 22px", fontSize: "13px" }}
@@ -4693,32 +5095,83 @@ function PlayerGameView({ game, onBack }) {
   // game may have _playerName and _playerCode injected at login
   const playerName = game._playerName || "Giocatore";
   const playerCode = game._playerCode || "?";
-  const [phase, setPhase] = useState("cinematic"); // cinematic | intro | enigma | post | complete
-  const [victoryDone, setVictoryDone] = useState(false); // has victory screen been dismissed
+  const [phase, setPhase] = useState("cinematic");
+  const [victoryDone, setVictoryDone] = useState(false);
   const [enigmaIdx, setEnigmaIdx] = useState(0);
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
-  const [geoStatus, setGeoStatus] = useState("idle"); // idle | checking | near | far | nocoords | error
+  const [geoStatus, setGeoStatus] = useState("idle");
   const [distance, setDistance] = useState(null);
   const [agentOpen, setAgentOpen] = useState(false);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   // ── Timer & score ──────────────────────────────────────────────────────────
-  const [enigmaStartTime, setEnigmaStartTime] = useState(null); // ms timestamp when enigma unlocked
+  const [enigmaStartTime, setEnigmaStartTime] = useState(null);
   const [timerExpired,    setTimerExpired]    = useState(false);
-  const [scores,          setScores]          = useState([]); // per-enigma: {idx, score, elapsed, expired}
+  const [scores,          setScores]          = useState([]);
   const totalScore = scores.reduce((s, e) => s + e.score, 0);
   // ── AgentX conversation log ───────────────────────────────────────────────
-  const [agentXLog, setAgentXLog] = useState([]); // {text, enigmaTitle, ts}
+  const [agentXLog, setAgentXLog] = useState([]);
+  const syncRef = useRef(null);
+  const lastSyncTs = useRef(null);
+
+  // ── Apply a saved session snapshot to local state ─────────────────────────
+  const applySession = (s) => {
+    if (!s || !s.phase || s.phase === "complete") return;
+    setEnigmaIdx(s.enigmaIdx || 0);
+    setPhase(s.phase || "enigma");
+    setScores(s.scores || []);
+    setAgentXLog(s.agentXLog || []);
+    lastSyncTs.current = s.savedAt || null;
+  };
+
+  // ── Load shared session on mount, then poll for updates every 5s ──────────
+  useEffect(() => {
+    const sk = sessionKey(game.id, playerCode);
+    const fetchSession = async (isInitial = false) => {
+      try {
+        const saved = await window.storage.get(sk, true);
+        if (saved) {
+          const s = JSON.parse(saved.value);
+          if (s && s.phase && s.phase !== "complete") {
+            if (!lastSyncTs.current || s.savedAt > lastSyncTs.current) {
+              applySession(s);
+            }
+          }
+        }
+      } catch {}
+      if (isInitial) setSessionLoaded(true);
+    };
+    fetchSession(true);
+    syncRef.current = setInterval(() => fetchSession(false), 5000);
+    return () => clearInterval(syncRef.current);
+  }, []);
+
+  // ── Save shared session ───────────────────────────────────────────────────
+  const saveSession = async (updates) => {
+    try {
+      const sk = sessionKey(game.id, playerCode);
+      const ts = new Date().toISOString();
+      const current = { phase, enigmaIdx, scores, agentXLog, savedAt: ts, ...updates };
+      lastSyncTs.current = ts;
+      await window.storage.set(sk, JSON.stringify(current), true);
+    } catch {}
+  };
+
+  const clearSession = async () => {
+    try { await window.storage.delete(sessionKey(game.id, playerCode), true); } catch {}
+  };
+
   const handleAgentXMessage = async (entry) => {
     const newLog = [...agentXLog, entry];
     setAgentXLog(newLog);
-    // Persist log to storage
     const key = `agentlog:${game.id}:${playerCode}`;
     try {
       await window.storage.set(key, JSON.stringify({
         playerCode, playerName, gameId: game.id, gameName: game.name,
         log: newLog, updatedAt: new Date().toISOString(),
-      }));
+      }), true);
     } catch {}
+    saveSession({ agentXLog: newLog });
   };
 
   // Use a ref for "unlocked" so watchPosition callback always sees current value
@@ -5104,6 +5557,17 @@ function PlayerGameView({ game, onBack }) {
   };
 
   // ─ CINEMATIC ─
+  if (!sessionLoaded) {
+    return (
+      <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center", color: G.muted, fontFamily: G.fontMono }}>
+          <div style={{ fontSize: "32px", animation: "spin 1s linear infinite", display: "inline-block", marginBottom: "12px" }}>◌</div>
+          <div style={{ fontSize: "12px", letterSpacing: "2px" }}>SINCRONIZZAZIONE SQUADRA…</div>
+        </div>
+      </div>
+    );
+  }
+
   if (phase === "cinematic") {
     return <CinematicIntro images={game.cinematicImages || []} onComplete={() => setPhase("intro")} />;
   }
@@ -5379,12 +5843,28 @@ function PlayerGameView({ game, onBack }) {
                 enigma={enigma}
                 playerName={playerName}
                 gameName={game.name}
-                onComplete={() => {
-                  const score = 8;
-                  const entry = { idx: enigmaIdx, title: enigma.title || "Sfida Video", score, elapsed: 0, expired: false };
-                  setScores(prev => [...prev, entry]);
-                  if (isLast) setPhase("complete");
-                  else { setEnigmaIdx(idx => idx + 1); setPhase("post"); }
+                onComplete={async (evalResult) => {
+                  const score = evalResult?.punteggio ?? 8;
+                  const entry = {
+                    idx: enigmaIdx,
+                    title: enigma.title || "Sfida Video",
+                    score, elapsed: 0, expired: false,
+                    isVideo: true,
+                    videoFeedback: evalResult?.feedback || "",
+                    videoValutazioneObiettivi: evalResult?.valutazione_obiettivi || "",
+                    videoObiettivoRaggiunto: evalResult?.obiettivo_raggiunto ?? true,
+                  };
+                  const newScores = [...scores, entry];
+                  setScores(newScores);
+                  if (isLast) {
+                    await clearSession();
+                    setPhase("complete");
+                  } else {
+                    const nextIdx = enigmaIdx + 1;
+                    await saveSession({ phase: "post", enigmaIdx: nextIdx, scores: newScores });
+                    setEnigmaIdx(nextIdx);
+                    setPhase("post");
+                  }
                 }}
               />
             </div>
@@ -5657,6 +6137,7 @@ function App() {
       {view === "admin-login" && (
         <AdminLogin
           adminPassword={adminPassword}
+          onResetPassword={(p) => { savePwd(p); }}
           onSuccess={() => { setAdminAuth(true); setView("admin-dashboard"); }}
           onBack={() => setView("home")}
         />

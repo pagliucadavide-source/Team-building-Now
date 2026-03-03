@@ -1,6 +1,31 @@
 {
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" }
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "api/claude.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/store.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/claude",
+      "dest": "/api/claude.js"
+    },
+    {
+      "src": "/api/store",
+      "dest": "/api/store.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ]
 }
-

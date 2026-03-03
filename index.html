@@ -1,29 +1,20 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEXUS — Escape Game</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0a0a0a;color:#e8e0d0;font-family:'Crimson Text',Georgia,serif}
-    ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#111}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
-    input,textarea,select{background:#1a1a1a;color:#e8e0d0;border:1px solid #333;border-radius:4px;padding:8px 12px;font-family:inherit;font-size:14px;width:100%;outline:none}
-    input:focus,textarea:focus{border-color:#c9a84c;box-shadow:0 0 0 2px rgba(201,168,76,0.15)}
-    input[type=range]{padding:0;background:transparent;border:none}
-    .btn-gold{background:linear-gradient(135deg,#c9a84c,#a07830)!important;color:#fff!important;border:none!important}
-    .btn-gold:hover{filter:brightness(1.15)}.btn-outline{background:transparent!important}.btn-danger{color:#e74c3c!important;border-color:#e74c3c!important}
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NEXUS</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#e8e0d0;font-family:"Crimson Text",Georgia,serif}::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#111}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}input,textarea,select{background:#1a1a1a;color:#e8e0d0;border:1px solid #333;border-radius:4px;padding:8px 12px;font-family:inherit;font-size:14px;width:100%;outline:none}input:focus,textarea:focus{border-color:#c9a84c;box-shadow:0 0 0 2px rgba(201,168,76,0.15)}input[type=range]{padding:0;background:transparent;border:none}.btn-gold{background:linear-gradient(135deg,#c9a84c,#a07830)!important;color:#fff!important;border:none!important}.btn-gold:hover{filter:brightness(1.15)}.btn-outline{background:transparent!important}.btn-danger{color:#e74c3c!important;border-color:#e74c3c!important}</style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useCallback } = React;
+
 
 // ─── Haversine distance (meters) ────────────────────────────────────────────
 function haversine(lat1, lon1, lat2, lon2) {
@@ -5103,63 +5094,11 @@ function PlayerGameView({ game, onBack }) {
   const [geoStatus, setGeoStatus] = useState("idle");
   const [distance, setDistance] = useState(null);
   const [agentOpen, setAgentOpen] = useState(false);
-  const [sessionLoaded, setSessionLoaded] = useState(false);
-  // ── Timer & score ──────────────────────────────────────────────────────────
   const [enigmaStartTime, setEnigmaStartTime] = useState(null);
   const [timerExpired,    setTimerExpired]    = useState(false);
   const [scores,          setScores]          = useState([]);
   const totalScore = scores.reduce((s, e) => s + e.score, 0);
-  // ── AgentX conversation log ───────────────────────────────────────────────
   const [agentXLog, setAgentXLog] = useState([]);
-  const syncRef = useRef(null);
-  const lastSyncTs = useRef(null);
-
-  // ── Apply a saved session snapshot to local state ─────────────────────────
-  const applySession = (s) => {
-    if (!s || !s.phase || s.phase === "complete") return;
-    setEnigmaIdx(s.enigmaIdx || 0);
-    setPhase(s.phase || "enigma");
-    setScores(s.scores || []);
-    setAgentXLog(s.agentXLog || []);
-    lastSyncTs.current = s.savedAt || null;
-  };
-
-  // ── Load shared session on mount, then poll for updates every 5s ──────────
-  useEffect(() => {
-    const sk = sessionKey(game.id, playerCode);
-    const fetchSession = async (isInitial = false) => {
-      try {
-        const saved = await window.storage.get(sk, true);
-        if (saved) {
-          const s = JSON.parse(saved.value);
-          if (s && s.phase && s.phase !== "complete") {
-            if (!lastSyncTs.current || s.savedAt > lastSyncTs.current) {
-              applySession(s);
-            }
-          }
-        }
-      } catch {}
-      if (isInitial) setSessionLoaded(true);
-    };
-    fetchSession(true);
-    syncRef.current = setInterval(() => fetchSession(false), 5000);
-    return () => clearInterval(syncRef.current);
-  }, []);
-
-  // ── Save shared session ───────────────────────────────────────────────────
-  const saveSession = async (updates) => {
-    try {
-      const sk = sessionKey(game.id, playerCode);
-      const ts = new Date().toISOString();
-      const current = { phase, enigmaIdx, scores, agentXLog, savedAt: ts, ...updates };
-      lastSyncTs.current = ts;
-      await window.storage.set(sk, JSON.stringify(current), true);
-    } catch {}
-  };
-
-  const clearSession = async () => {
-    try { await window.storage.delete(sessionKey(game.id, playerCode), true); } catch {}
-  };
 
   const handleAgentXMessage = async (entry) => {
     const newLog = [...agentXLog, entry];
@@ -5169,9 +5108,8 @@ function PlayerGameView({ game, onBack }) {
       await window.storage.set(key, JSON.stringify({
         playerCode, playerName, gameId: game.id, gameName: game.name,
         log: newLog, updatedAt: new Date().toISOString(),
-      }), true);
+      }));
     } catch {}
-    saveSession({ agentXLog: newLog });
   };
 
   // Use a ref for "unlocked" so watchPosition callback always sees current value
@@ -5557,17 +5495,6 @@ function PlayerGameView({ game, onBack }) {
   };
 
   // ─ CINEMATIC ─
-  if (!sessionLoaded) {
-    return (
-      <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center", color: G.muted, fontFamily: G.fontMono }}>
-          <div style={{ fontSize: "32px", animation: "spin 1s linear infinite", display: "inline-block", marginBottom: "12px" }}>◌</div>
-          <div style={{ fontSize: "12px", letterSpacing: "2px" }}>SINCRONIZZAZIONE SQUADRA…</div>
-        </div>
-      </div>
-    );
-  }
-
   if (phase === "cinematic") {
     return <CinematicIntro images={game.cinematicImages || []} onComplete={() => setPhase("intro")} />;
   }
@@ -5843,7 +5770,7 @@ function PlayerGameView({ game, onBack }) {
                 enigma={enigma}
                 playerName={playerName}
                 gameName={game.name}
-                onComplete={async (evalResult) => {
+                onComplete={(evalResult) => {
                   const score = evalResult?.punteggio ?? 8;
                   const entry = {
                     idx: enigmaIdx,
@@ -5856,15 +5783,8 @@ function PlayerGameView({ game, onBack }) {
                   };
                   const newScores = [...scores, entry];
                   setScores(newScores);
-                  if (isLast) {
-                    await clearSession();
-                    setPhase("complete");
-                  } else {
-                    const nextIdx = enigmaIdx + 1;
-                    await saveSession({ phase: "post", enigmaIdx: nextIdx, scores: newScores });
-                    setEnigmaIdx(nextIdx);
-                    setPhase("post");
-                  }
+                  if (isLast) setPhase("complete");
+                  else { setEnigmaIdx(idx => idx + 1); setPhase("post"); }
                 }}
               />
             </div>
@@ -6195,7 +6115,8 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
 </script>
 </body>
 </html>

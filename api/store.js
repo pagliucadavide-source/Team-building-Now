@@ -1,4 +1,9 @@
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -10,27 +15,26 @@ export default async function handler(req, res) {
     if (req.method === "GET") {
       const { key, list, prefix } = req.query;
       if (list) {
-        // List keys with optional prefix
         const pattern = prefix ? `${prefix}*` : "*";
-        const keys = await kv.keys(pattern);
-        return res.status(200).json({ keys });
+        const keys = await redis.keys(pattern);
+        return res.status(200).json({ keys: keys || [] });
       }
       if (!key) return res.status(400).json({ error: "key required" });
-      const value = await kv.get(key);
+      const value = await redis.get(key);
       return res.status(200).json({ value: value ?? undefined });
     }
 
     if (req.method === "POST") {
       const { key, value } = req.body;
       if (!key) return res.status(400).json({ error: "key required" });
-      await kv.set(key, value);
+      await redis.set(key, value);
       return res.status(200).json({ key, value });
     }
 
     if (req.method === "DELETE") {
       const { key } = req.query;
       if (!key) return res.status(400).json({ error: "key required" });
-      await kv.del(key);
+      await redis.del(key);
       return res.status(200).json({ key, deleted: true });
     }
 

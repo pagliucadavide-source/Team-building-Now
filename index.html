@@ -15,6 +15,28 @@
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useCallback } = React;
 
+// ─── localStorage wrapper (replaces window.storage for Vercel compatibility) ──
+const storage = {
+  get: async (key) => {
+    try { const v = localStorage.getItem(key); return v ? { value: v } : null; } catch { return null; }
+  },
+  set: async (key, value) => {
+    try { localStorage.setItem(key, value); return { key, value }; } catch { return null; }
+  },
+  delete: async (key) => {
+    try { localStorage.removeItem(key); return { key, deleted: true }; } catch { return null; }
+  },
+  list: async (prefix) => {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!prefix || k.startsWith(prefix)) keys.push(k);
+      }
+      return { keys };
+    } catch { return { keys: [] }; }
+  },
+};
 
 // ─── Haversine distance (meters) ────────────────────────────────────────────
 function haversine(lat1, lon1, lat2, lon2) {
@@ -2005,7 +2027,7 @@ function AdminGameEditor({ game, onSave, onBack }) {
   useEffect(() => {
     (async () => {
       try {
-        const draft = await window.storage.get(`draft:${game.id}`);
+        const draft = await storage.get(`draft:${game.id}`);
         if (draft) {
           const parsed = JSON.parse(draft.value);
           setG(parsed);
@@ -2021,7 +2043,7 @@ function AdminGameEditor({ game, onSave, onBack }) {
       clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(async () => {
         try {
-          await window.storage.set(`draft:${next.id}`, JSON.stringify(next));
+          await storage.set(`draft:${next.id}`, JSON.stringify(next));
           setLastSaved(new Date());
         } catch {}
       }, 800);
@@ -2041,7 +2063,7 @@ function AdminGameEditor({ game, onSave, onBack }) {
   const handleSave = async () => {
     // On explicit save: persist to games list AND clear draft
     onSave(g);
-    try { await window.storage.delete(`draft:${g.id}`); } catch {}
+    try { await storage.delete(`draft:${g.id}`); } catch {}
   };
 
   return (
@@ -2795,8 +2817,8 @@ function ScoreboardPanel({ games }) {
   const doDeleteEntry = async (gameId, playerCode) => {
     const key = `${gameId}:${playerCode}`;
     setDeleting(key);
-    try { await window.storage.delete(`scores:${gameId}:${playerCode}`); } catch {}
-    try { await window.storage.delete(`agentlog:${gameId}:${playerCode}`); } catch {}
+    try { await storage.delete(`scores:${gameId}:${playerCode}`); } catch {}
+    try { await storage.delete(`agentlog:${gameId}:${playerCode}`); } catch {}
     setAllScores(prev => prev.filter(s => !(s.gameId === gameId && s.playerCode === playerCode)));
     setAgentLogs(prev => { const n = {...prev}; delete n[`${gameId}:${playerCode}`]; return n; });
     setDeleting(null);
@@ -2806,8 +2828,8 @@ function ScoreboardPanel({ games }) {
     setDeleting(`bulk`);
     const targets = gameId === "all" ? allScores : allScores.filter(s => s.gameId === gameId);
     for (const s of targets) {
-      try { await window.storage.delete(`scores:${s.gameId}:${s.playerCode}`); } catch {}
-      try { await window.storage.delete(`agentlog:${s.gameId}:${s.playerCode}`); } catch {}
+      try { await storage.delete(`scores:${s.gameId}:${s.playerCode}`); } catch {}
+      try { await storage.delete(`agentlog:${s.gameId}:${s.playerCode}`); } catch {}
     }
     setAllScores(prev => gameId === "all" ? [] : prev.filter(s => s.gameId !== gameId));
     setDeleting(null);
@@ -2820,20 +2842,20 @@ function ScoreboardPanel({ games }) {
       setLoading(true);
       try {
         // Load scores
-        const keys = await window.storage.list("scores:");
+        const keys = await storage.list("scores:");
         const entries = await Promise.all(
           (keys.keys || []).map(async (k) => {
-            try { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; }
+            try { const r = await storage.get(k); return r ? JSON.parse(r.value) : null; }
             catch { return null; }
           })
         );
         setAllScores(entries.filter(Boolean).sort((a, b) => b.total - a.total));
         // Load agentX logs
-        const logKeys = await window.storage.list("agentlog:");
+        const logKeys = await storage.list("agentlog:");
         const logs = {};
         await Promise.all((logKeys.keys || []).map(async (k) => {
           try {
-            const r = await window.storage.get(k);
+            const r = await storage.get(k);
             if (r) {
               const d = JSON.parse(r.value);
               logs[`${d.gameId}:${d.playerCode}`] = d;
@@ -3055,11 +3077,11 @@ function AdminDashboard({ games, adminPassword, onEdit, onNewGame, onDeleteGame,
     // Load score and agentlog from storage
     let scoreData = null, agentLogData = null;
     try {
-      const sr = await window.storage.get(`scores:${game.id}:${player.code}`);
+      const sr = await storage.get(`scores:${game.id}:${player.code}`);
       if (sr) scoreData = JSON.parse(sr.value);
     } catch {}
     try {
-      const lr = await window.storage.get(`agentlog:${game.id}:${player.code}`);
+      const lr = await storage.get(`agentlog:${game.id}:${player.code}`);
       if (lr) agentLogData = JSON.parse(lr.value);
     } catch {}
     setReportTarget({
@@ -5105,7 +5127,7 @@ function PlayerGameView({ game, onBack }) {
     setAgentXLog(newLog);
     const key = `agentlog:${game.id}:${playerCode}`;
     try {
-      await window.storage.set(key, JSON.stringify({
+      await storage.set(key, JSON.stringify({
         playerCode, playerName, gameId: game.id, gameName: game.name,
         log: newLog, updatedAt: new Date().toISOString(),
       }));
@@ -5264,7 +5286,7 @@ function PlayerGameView({ game, onBack }) {
       // Persist scores to storage keyed by playerCode + gameId
       const storageKey = `scores:${game.id}:${playerCode}`;
       try {
-        await window.storage.set(storageKey, JSON.stringify({
+        await storage.set(storageKey, JSON.stringify({
           playerCode, playerName,
           gameId: game.id, gameName: game.name,
           scores: newScores,
@@ -5948,9 +5970,9 @@ function App() {
   useEffect(() => {
     (async () => {
       try {
-        const gRes = await window.storage.get("escape_games");
+        const gRes = await storage.get("escape_games");
         if (gRes) setGames(JSON.parse(gRes.value));
-        const pRes = await window.storage.get("escape_admin_pwd");
+        const pRes = await storage.get("escape_admin_pwd");
         if (pRes) setAdminPassword(pRes.value);
       } catch {}
       setLoaded(true);
@@ -5960,12 +5982,12 @@ function App() {
   // Save games
   const saveGames = async (g) => {
     setGames(g);
-    try { await window.storage.set("escape_games", JSON.stringify(g)); } catch {}
+    try { await storage.set("escape_games", JSON.stringify(g)); } catch {}
   };
 
   const savePwd = async (p) => {
     setAdminPassword(p);
-    try { await window.storage.set("escape_admin_pwd", p); } catch {}
+    try { await storage.set("escape_admin_pwd", p); } catch {}
   };
 
   if (!loaded) {
@@ -6073,10 +6095,10 @@ function App() {
             onDeleteGame={async (id) => {
               // Wipe all scores and agentlogs for this game
               try {
-                const sk = await window.storage.list(`scores:${id}:`);
-                for (const k of (sk?.keys || [])) { try { await window.storage.delete(k); } catch {} }
-                const lk = await window.storage.list(`agentlog:${id}:`);
-                for (const k of (lk?.keys || [])) { try { await window.storage.delete(k); } catch {} }
+                const sk = await storage.list(`scores:${id}:`);
+                for (const k of (sk?.keys || [])) { try { await storage.delete(k); } catch {} }
+                const lk = await storage.list(`agentlog:${id}:`);
+                for (const k of (lk?.keys || [])) { try { await storage.delete(k); } catch {} }
               } catch {}
               saveGames(games.filter((g) => g.id !== id));
             }}
@@ -6114,7 +6136,6 @@ function App() {
     </MuteContext.Provider>
   );
 }
-
 
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
 </script>

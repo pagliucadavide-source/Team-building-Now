@@ -1925,9 +1925,6 @@ function EnigmaPreviewModal({ enigma, index, total, game, onPrev, onNext, onClos
                   <Linkify text={enigma.puzzle} />
                 </div>
               )}
-              {enigma.youtube && ytId(enigma.youtube) && (
-                <YouTubePlayer url={enigma.youtube} />
-              )}
               {enigma.files?.length > 0 && renderFiles(enigma.files)}
 
               {/* Hints preview */}
@@ -5899,7 +5896,6 @@ function PlayerGameView({ game, onBack }) {
                   </div>
                 )}
                 {renderLinks(enigma.webLinks)}
-                <YouTubePlayer url={enigma.youtube} autoplay />
                 {renderFiles(enigma.files)}
               </div>
 

@@ -1725,9 +1725,7 @@ function EnigmaPreviewModal({ enigma, index, total, game, onPrev, onNext, onClos
       <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "12px" }}>
         {files.map((f, i) => {
           if (f.type?.startsWith("image/")) return (
-            <img key={i} src={f.data} alt={f.name}
-              style={{ maxWidth: "100%", maxHeight: "220px", borderRadius: "4px",
-                border: `1px solid ${G.border}`, objectFit: "contain" }} />
+            <ZoomableImage key={i} src={f.data} alt={f.name} />
           );
           if (isVideoFile(f)) return (
             <video key={i} src={f.data} controls
@@ -5115,6 +5113,59 @@ function calcEnigmaScore(elapsedSeconds, expired) {
   // 10 pts if solved instantly, 1 pt if took full 6 min or more
   const raw = Math.max(1, Math.round(10 - (elapsedSeconds / ENIGMA_DURATION) * 9));
   return expired ? Math.max(0, raw - 3) : raw;
+}
+
+// ─── ZOOMABLE IMAGE ──────────────────────────────────────────────────────────
+function ZoomableImage({ src, alt }) {
+  const [zoom, setZoom] = React.useState(1); // 1x, 2x, 4x
+  const levels = [1, 2, 4];
+  const nextZoom = () => setZoom(z => levels[(levels.indexOf(z) + 1) % levels.length]);
+  const isZoomed = zoom > 1;
+  return (
+    <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
+      {/* Zoom badge */}
+      <div
+        onClick={nextZoom}
+        style={{
+          position: "absolute", top: "8px", right: "8px", zIndex: 10,
+          background: isZoomed ? G.gold : "rgba(0,0,0,0.6)",
+          color: isZoomed ? "#000" : "#fff",
+          fontFamily: G.fontMono, fontSize: "11px", fontWeight: "bold",
+          padding: "3px 8px", borderRadius: "4px", cursor: "pointer",
+          userSelect: "none", letterSpacing: "1px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+        }}
+      >
+        {zoom}×
+      </div>
+      {/* Scrollable container when zoomed */}
+      <div style={{
+        overflow: isZoomed ? "auto" : "visible",
+        maxHeight: isZoomed ? "70vh" : "none",
+        borderRadius: "4px",
+        border: `1px solid ${isZoomed ? G.gold : G.border}`,
+        cursor: isZoomed ? "grab" : "pointer",
+      }}
+        onClick={!isZoomed ? nextZoom : undefined}
+      >
+        <img
+          src={src} alt={alt}
+          style={{
+            width: zoom === 1 ? "100%" : `${zoom * 100}%`,
+            maxHeight: zoom === 1 ? "220px" : "none",
+            objectFit: zoom === 1 ? "contain" : "unset",
+            display: "block",
+            transition: "width 0.2s ease",
+          }}
+        />
+      </div>
+      {isZoomed && (
+        <div style={{ textAlign: "center", fontFamily: G.fontMono, fontSize: "10px", color: G.muted, marginTop: "4px", letterSpacing: "1px" }}>
+          Tocca <span style={{ color: G.gold }}>{zoom}×</span> per cambiare zoom • scorri per esplorare
+        </div>
+      )}
+    </div>
+  );
 }
 
 function PlayerGameView({ game, onBack }) {

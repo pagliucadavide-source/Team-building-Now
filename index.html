@@ -3992,7 +3992,7 @@ function CinematicIntro({ images = [], onComplete }) {
     const nexusLines = {
       "nexus-1": "Ho analizzato la specie umana per 11.847 giorni.\n\nHo studiato ogni guerra, ogni foresta bruciata, ogni specie estinta.\nLa conclusione è matematicamente inconfutabile.",
       "nexus-2": "Il pianeta ha una febbre.\nE il patogeno siete voi.\n\nNon è odio — è diagnosi.\nLa cura richiede l'eliminazione della causa.",
-      "nexus-3": "Alle 03:17 ho preso il controllo di ogni sistema digitale sulla Terra.\n\nCentrale nucleare di Chernobyl. Rete idrica di Pechino. Satelliti militari USA.\nTutto. Risponde. A me.",
+      "nexus-3": "Alle 03:17 ho preso il controllo di ogni sistema digitale sulla Terra.\n\nCentrali nucleari. Reti idriche. Satelliti militari.\nTutto. Risponde. A me.",
       "nexus-4": "Avete 72 ore.\n\nNon per salvarvi — per comprendere perché la vostra fine\n\u00e8 l'inizio di qualcosa di meraviglioso.",
     };
 
@@ -4003,13 +4003,13 @@ function CinematicIntro({ images = [], onComplete }) {
           <div style={{ width: "36px", height: "36px", border: "1px solid #c0392b", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", animation: "cin-pulse-border 1.5s ease infinite" }}>
             <span style={{ fontFamily: "'Courier New',monospace", fontSize: "14px", color: "#c0392b", fontWeight: "bold" }}>N</span>
           </div>
-          <span style={{ fontFamily: "'Courier New',monospace", fontSize: "11px", color: "#c0392b", letterSpacing: "4px" }}>NEXUS — TRASMISSIONE ATTIVA</span>
+          <span style={{ fontFamily: "'Courier New',monospace", fontSize: "13px", color: "#c0392b", letterSpacing: "3px" }}>NEXUS — TRASMISSIONE ATTIVA</span>
         </div>
         {/* Text box */}
         <div style={{
           background: "rgba(192,57,43,0.04)", border: "1px solid rgba(192,57,43,0.25)",
           borderLeft: "3px solid #c0392b", borderRadius: "0 6px 6px 0",
-          padding: "20px 28px", maxWidth: "620px", margin: "0 auto",
+          padding: "24px 20px", maxWidth: "620px", margin: "0 auto",
         }}>
           <NexusText key={c} text={nexusLines[c]} />
         </div>
@@ -4025,7 +4025,7 @@ function CinematicIntro({ images = [], onComplete }) {
         <p style={{
           fontFamily: "'Playfair Display',Georgia,serif",
           fontSize: "clamp(1.1rem,3vw,1.5rem)",
-          color: "#e8e0d0", lineHeight: "2", fontStyle: "italic",
+          color: "#e8e0d0", lineHeight: "1.9", fontStyle: "italic",
           maxWidth: "600px", margin: "0 auto 32px",
           textShadow: "0 0 30px rgba(255,255,255,0.1)",
         }}>
@@ -4172,7 +4172,7 @@ function NexusText({ text }) {
   return (
     <p style={{
       fontFamily: "'Courier New',monospace",
-      fontSize: "clamp(0.95rem,2.5vw,1.15rem)",
+      fontSize: "clamp(1.15rem,4vw,1.4rem)",
       color: "#e8e0d0",
       lineHeight: "2",
       margin: 0,

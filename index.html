@@ -1062,6 +1062,30 @@ function EnigmaEditor({ enigma, onChange, onDelete, onDuplicate, index }) {
           <h4 style={{ ...styles.title, fontSize: "14px", marginBottom: "12px" }}>🧩 PUZZLE / QUIZ</h4>
           <Input label="Testo dell'Enigma o Domanda" value={enigma.puzzle} onChange={(v) => upd("puzzle", v)} rows={3} placeholder="Descrivi la sfida o il quiz che il giocatore deve risolvere..." />
           <Input label="Risposta Corretta (case insensitive)" value={enigma.answer} onChange={(v) => upd("answer", v)} placeholder="La risposta segreta..." />
+          <div style={{ marginTop: "12px" }}>
+            <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.muted, letterSpacing: "1px", marginBottom: "6px" }}>
+              🎬 VIDEO YOUTUBE (opzionale)
+            </div>
+            <input
+              type="text"
+              value={enigma.youtubeUrl || ""}
+              onChange={(e) => upd("youtubeUrl", e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=... oppure https://youtu.be/..."
+              style={{ background: "#1a1a1a", color: "#e8e0d0", border: "1px solid #333", borderRadius: "4px", padding: "8px 12px", fontFamily: "inherit", fontSize: "13px", width: "100%", outline: "none" }}
+            />
+            {enigma.youtubeUrl && getYouTubeId(enigma.youtubeUrl) && (
+              <div style={{ marginTop: "8px", borderRadius: "4px", overflow: "hidden", border: "1px solid #333" }}>
+                <iframe
+                  src={"https://www.youtube.com/embed/" + getYouTubeId(enigma.youtubeUrl)}
+                  width="100%" height="180"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ display: "block" }}
+                />
+              </div>
+            )}
+          </div>
           <hr style={styles.divider} />
           <h4 style={{ ...styles.title, fontSize: "14px", marginBottom: "12px" }}>💬 INDIZI PROGRESSIVI PER AGENTX</h4>
           {[0, 1, 2].map((i) => (
@@ -1849,6 +1873,19 @@ function EnigmaPreviewModal({ enigma, index, total, game, onPrev, onNext, onClos
                 </div>
               )}
               {enigma.files?.length > 0 && renderFiles(enigma.files)}
+              {/* YouTube video */}
+              {enigma.youtubeUrl && getYouTubeId(enigma.youtubeUrl) && (
+                <div style={{ marginTop: "16px", borderRadius: "8px", overflow: "hidden", border: "1px solid rgba(201,168,76,0.3)", boxShadow: "0 4px 16px rgba(0,0,0,0.3)" }}>
+                  <iframe
+                    src={"https://www.youtube.com/embed/" + getYouTubeId(enigma.youtubeUrl) + "?rel=0"}
+                    width="100%" height="220"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ display: "block" }}
+                  />
+                </div>
+              )}
               {/* GPS coords preview */}
               {enigma.preLat && enigma.preLng && (
                 <div style={{ marginTop: "16px", ...styles.card, background: "rgba(201,168,76,0.04)",
@@ -1898,6 +1935,19 @@ function EnigmaPreviewModal({ enigma, index, total, game, onPrev, onNext, onClos
                 <YouTubePlayer url={enigma.youtube} />
               )}
               {enigma.files?.length > 0 && renderFiles(enigma.files)}
+              {/* YouTube video preview */}
+              {enigma.youtubeUrl && getYouTubeId(enigma.youtubeUrl) && (
+                <div style={{ marginTop: "16px", borderRadius: "8px", overflow: "hidden", border: "1px solid rgba(201,168,76,0.3)" }}>
+                  <iframe
+                    src={"https://www.youtube.com/embed/" + getYouTubeId(enigma.youtubeUrl) + "?rel=0"}
+                    width="100%" height="200"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ display: "block" }}
+                  />
+                </div>
+              )}
               {/* Hints preview */}
               {enigma.hints?.filter(Boolean).length > 0 && (
                 <div style={{ marginTop: "16px", ...styles.card,
@@ -5142,6 +5192,20 @@ function ZoomableImage({ src, alt }) {
       />
     </div>
   );
+}
+
+// ─── YouTube ID extractor ─────────────────────────────────────────────────
+function getYouTubeId(url) {
+  if (!url) return null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/,
+    /youtube\.com\/watch\?.*v=([\w-]{11})/,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
+  }
+  return null;
 }
 
 function PlayerGameView({ game, onBack }) {

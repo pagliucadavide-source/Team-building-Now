@@ -5117,51 +5117,49 @@ function calcEnigmaScore(elapsedSeconds, expired) {
 
 // ─── ZOOMABLE IMAGE ──────────────────────────────────────────────────────────
 function ZoomableImage({ src, alt }) {
-  const [zoom, setZoom] = React.useState(1); // 1x, 2x, 4x
-  const levels = [1, 2, 4];
-  const nextZoom = () => setZoom(z => levels[(levels.indexOf(z) + 1) % levels.length]);
-  const isZoomed = zoom > 1;
+  const [zoom, setZoom] = React.useState(1);
+  const toggle = () => setZoom(z => z === 1 ? 2 : 1);
   return (
-    <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
-      {/* Zoom badge */}
+    <div style={{ position: "relative", width: "100%" }}>
+      {/* Zoom button */}
       <div
-        onClick={nextZoom}
+        onClick={toggle}
         style={{
           position: "absolute", top: "8px", right: "8px", zIndex: 10,
-          background: isZoomed ? G.gold : "rgba(0,0,0,0.6)",
-          color: isZoomed ? "#000" : "#fff",
-          fontFamily: G.fontMono, fontSize: "11px", fontWeight: "bold",
-          padding: "3px 8px", borderRadius: "4px", cursor: "pointer",
+          background: zoom === 2 ? G.gold : "rgba(0,0,0,0.65)",
+          color: zoom === 2 ? "#000" : "#fff",
+          fontFamily: G.fontMono, fontSize: "12px", fontWeight: "bold",
+          padding: "4px 10px", borderRadius: "4px", cursor: "pointer",
           userSelect: "none", letterSpacing: "1px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
         }}
       >
-        {zoom}×
+        {zoom === 1 ? "2×" : "1×"}
       </div>
-      {/* Scrollable container when zoomed */}
-      <div style={{
-        overflow: isZoomed ? "auto" : "visible",
-        maxHeight: isZoomed ? "70vh" : "none",
-        borderRadius: "4px",
-        border: `1px solid ${isZoomed ? G.gold : G.border}`,
-        cursor: isZoomed ? "grab" : "pointer",
-      }}
-        onClick={!isZoomed ? nextZoom : undefined}
+      {/* Image container */}
+      <div
+        onClick={toggle}
+        style={{
+          overflow: zoom === 2 ? "auto" : "hidden",
+          maxHeight: zoom === 2 ? "80vh" : "260px",
+          borderRadius: "6px",
+          border: `1px solid ${zoom === 2 ? G.gold : G.border}`,
+          cursor: "pointer",
+        }}
       >
         <img
           src={src} alt={alt}
           style={{
-            width: zoom === 1 ? "100%" : `${zoom * 100}%`,
-            maxHeight: zoom === 1 ? "220px" : "none",
-            objectFit: zoom === 1 ? "contain" : "unset",
+            width: zoom === 2 ? "200%" : "100%",
             display: "block",
-            transition: "width 0.2s ease",
+            objectFit: zoom === 1 ? "contain" : "unset",
+            transition: "width 0.25s ease",
           }}
         />
       </div>
-      {isZoomed && (
+      {zoom === 2 && (
         <div style={{ textAlign: "center", fontFamily: G.fontMono, fontSize: "10px", color: G.muted, marginTop: "4px", letterSpacing: "1px" }}>
-          Tocca <span style={{ color: G.gold }}>{zoom}×</span> per cambiare zoom • scorri per esplorare
+          Scorri per esplorare • clicca per ridurre
         </div>
       )}
     </div>

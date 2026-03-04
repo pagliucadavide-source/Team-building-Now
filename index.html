@@ -66,10 +66,12 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 function ytId(url) {
   if (!url) return null;
-  const m = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
-  );
-  return m ? m[1] : null;
+  url = url.trim();
+  if (url.indexOf('/shorts/') !== -1) return url.split('/shorts/')[1].split(/[?&#]/)[0].substring(0,11);
+  if (url.indexOf('youtu.be/') !== -1) return url.split('youtu.be/')[1].split(/[?&#]/)[0].substring(0,11);
+  if (url.indexOf('v=') !== -1) return url.split('v=')[1].split(/[?&#]/)[0].substring(0,11);
+  if (url.indexOf('/embed/') !== -1) return url.split('/embed/')[1].split(/[?&#]/)[0].substring(0,11);
+  return null;
 }
 
 function uid() {
@@ -1064,15 +1066,15 @@ function EnigmaEditor({ enigma, onChange, onDelete, onDuplicate, index }) {
             <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.muted, letterSpacing: "1px", marginBottom: "6px" }}>🎬 VIDEO YOUTUBE (opzionale)</div>
             <input
               type="url"
-              value={enigma.youtubeUrl || ""}
-              onChange={(e) => upd("youtubeUrl", e.target.value)}
+              value={enigma.youtube || ""}
+              onChange={(e) => upd("youtube", e.target.value)}
               placeholder="https://www.youtube.com/watch?v=..."
               style={{ background: "#1a1a1a", color: "#e8e0d0", border: "1px solid #333", borderRadius: "4px", padding: "8px 12px", fontFamily: "inherit", fontSize: "13px", width: "100%", outline: "none" }}
             />
-            {enigma.youtubeUrl && getYouTubeId(enigma.youtubeUrl) ? (
+            {enigma.youtubeUrl && ytId(enigma.youtube) ? (
               <div style={{ marginTop: "8px", borderRadius: "4px", overflow: "hidden", border: "1px solid rgba(201,168,76,0.4)" }}>
                 <iframe
-                  src={"https://www.youtube-nocookie.com/embed/" + getYouTubeId(enigma.youtubeUrl) + "?rel=0"}
+                  src={"https://www.youtube-nocookie.com/embed/" + ytId(enigma.youtube) + "?rel=0"}
                   width="100%" height="180" frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen style={{ display: "block" }}
@@ -1877,19 +1879,7 @@ function EnigmaPreviewModal({ enigma, index, total, game, onPrev, onNext, onClos
                 </div>
               )}
               {enigma.files?.length > 0 && renderFiles(enigma.files)}
-              {/* YouTube video */}
-              {enigma.youtubeUrl && getYouTubeId(enigma.youtubeUrl) && (
-                <div style={{ marginTop: "16px", borderRadius: "8px", overflow: "hidden", border: "1px solid rgba(201,168,76,0.3)", boxShadow: "0 4px 16px rgba(0,0,0,0.3)" }}>
-                  <iframe
-                    src={"https://www.youtube-nocookie.com/embed/" + getYouTubeId(enigma.youtubeUrl) + "?rel=0"}
-                    width="100%" height="220"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    style={{ display: "block" }}
-                  />
-                </div>
-              )}
+
               {/* GPS coords preview */}
               {enigma.preLat && enigma.preLng && (
                 <div style={{ marginTop: "16px", ...styles.card, background: "rgba(201,168,76,0.04)",
@@ -1939,19 +1929,7 @@ function EnigmaPreviewModal({ enigma, index, total, game, onPrev, onNext, onClos
                 <YouTubePlayer url={enigma.youtube} />
               )}
               {enigma.files?.length > 0 && renderFiles(enigma.files)}
-              {/* YouTube video preview */}
-              {enigma.youtubeUrl && getYouTubeId(enigma.youtubeUrl) && (
-                <div style={{ marginTop: "16px", borderRadius: "8px", overflow: "hidden", border: "1px solid rgba(201,168,76,0.3)" }}>
-                  <iframe
-                    src={"https://www.youtube-nocookie.com/embed/" + getYouTubeId(enigma.youtubeUrl) + "?rel=0"}
-                    width="100%" height="200"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    style={{ display: "block" }}
-                  />
-                </div>
-              )}
+
               {/* Hints preview */}
               {enigma.hints?.filter(Boolean).length > 0 && (
                 <div style={{ marginTop: "16px", ...styles.card,
@@ -1969,6 +1947,8 @@ function EnigmaPreviewModal({ enigma, index, total, game, onPrev, onNext, onClos
                   ))}
                 </div>
               )}
+              {/* YouTube video */}
+              {enigma.youtube && <YouTubePlayer url={enigma.youtube} />}
               {/* Answer input simulation */}
               <div style={{ marginTop: "20px", ...styles.card,
                 border: `1px solid rgba(201,168,76,0.3)`,
@@ -5198,33 +5178,6 @@ function ZoomableImage({ src, alt }) {
   );
 }
 
-// ─── YouTube ID extractor ─────────────────────────────────────────────────
-function getYouTubeId(url) {
-  if (!url) return null;
-  url = url.trim();
-  // youtu.be/ID
-  if (url.indexOf('youtu.be/') !== -1) {
-    const part = url.split('youtu.be/')[1];
-    return part ? part.split(/[?&#]/)[0].substring(0, 11) : null;
-  }
-  // youtube.com/shorts/ID
-  if (url.indexOf('/shorts/') !== -1) {
-    const part = url.split('/shorts/')[1];
-    return part ? part.split(/[?&#]/)[0].substring(0, 11) : null;
-  }
-  // youtube.com/watch?v=ID
-  if (url.indexOf('v=') !== -1) {
-    const part = url.split('v=')[1];
-    return part ? part.split(/[?&#]/)[0].substring(0, 11) : null;
-  }
-  // youtube.com/embed/ID
-  if (url.indexOf('/embed/') !== -1) {
-    const part = url.split('/embed/')[1];
-    return part ? part.split(/[?&#]/)[0].substring(0, 11) : null;
-  }
-  return null;
-}
-
 function PlayerGameView({ game, onBack }) {
   // game may have _playerName and _playerCode injected at login
   const playerName = game._playerName || "Giocatore";
@@ -5962,6 +5915,8 @@ function PlayerGameView({ game, onBack }) {
                   />
                 </div>
               )}
+
+              {enigma.youtube && <YouTubePlayer url={enigma.youtube} autoplay />}
 
               <div style={{ ...styles.card }}>
                 <Input label="La tua risposta" value={answer} onChange={setAnswer} placeholder="Inserisci qui la risposta…" style={{ fontSize: "18px" }} />

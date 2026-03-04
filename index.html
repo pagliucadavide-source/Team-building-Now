@@ -4371,7 +4371,7 @@ function ImageViewer({ src, alt }) {
   const drawingRef = useRef(false);
   const lastPosRef = useRef(null);
   const [mode,       setMode]       = useState("view");   // "view" | "lens" | "draw" | "erase"
-  const [lensZoom,   setLensZoom]   = useState(3);
+  const [lensZoom,   setLensZoom]   = useState(2);
   const [lens,       setLens]       = useState(null);
   const LENS_SIZE = 200;
   const [drawColor,  setDrawColor]  = useState("#ff3333");
@@ -4473,13 +4473,13 @@ function ImageViewer({ src, alt }) {
         {/* Lens zoom levels */}
         {mode === "lens" && <>
           <div style={{ width: "1px", height: "24px", background: "rgba(255,255,255,0.1)", margin: "0 2px" }} />
-          {[2, 4, 6, 8, 12, 16, 20].map(z => (
+          {[2, 4].map(z => (
             <button key={z} style={{ ...toolBtn(lensZoom === z), padding: "4px 9px", fontSize: "11px" }}
               onClick={() => setLensZoom(z)}>{z}×</button>
           ))}
           <div style={{ width: "1px", height: "24px", background: "rgba(255,255,255,0.1)", margin: "0 2px" }} />
           <input
-            type="range" min="1" max="20" step="0.5" value={lensZoom}
+            type="range" min="2" max="4" step="0.5" value={lensZoom}
             onChange={e => setLensZoom(Number(e.target.value))}
             style={{ width: "80px", accentColor: "#c9a84c", cursor: "pointer" }}
           />
@@ -5117,49 +5117,48 @@ function calcEnigmaScore(elapsedSeconds, expired) {
 
 // ─── ZOOMABLE IMAGE ──────────────────────────────────────────────────────────
 function ZoomableImage({ src, alt }) {
-  const [zoom, setZoom] = React.useState(1);
-  const toggle = () => setZoom(z => z === 1 ? 2 : 1);
+  const [zoom, setZoom] = React.useState(1); // 1 | 2 | 4
+  const next = () => setZoom(z => z === 1 ? 2 : z === 2 ? 4 : 1);
+  const label = zoom === 1 ? '2×' : zoom === 2 ? '4×' : '1×';
   return (
-    <div style={{ position: "relative", width: "100%" }}>
-      {/* Zoom button */}
+    <div style={{ position: 'relative', width: '100%' }}>
       <div
-        onClick={toggle}
+        onClick={next}
         style={{
-          position: "absolute", top: "8px", right: "8px", zIndex: 10,
-          background: zoom === 2 ? G.gold : "rgba(0,0,0,0.65)",
-          color: zoom === 2 ? "#000" : "#fff",
-          fontFamily: G.fontMono, fontSize: "12px", fontWeight: "bold",
-          padding: "4px 10px", borderRadius: "4px", cursor: "pointer",
-          userSelect: "none", letterSpacing: "1px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+          position: 'absolute', top: '8px', right: '8px', zIndex: 10,
+          background: zoom > 1 ? G.gold : 'rgba(0,0,0,0.65)',
+          color: zoom > 1 ? '#000' : '#fff',
+          fontFamily: G.fontMono, fontSize: '12px', fontWeight: 'bold',
+          padding: '4px 10px', borderRadius: '4px', cursor: 'pointer',
+          userSelect: 'none', letterSpacing: '1px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
         }}
       >
-        {zoom === 1 ? "2×" : "1×"}
+        {label}
       </div>
-      {/* Image container */}
       <div
-        onClick={toggle}
+        onClick={next}
         style={{
-          overflow: zoom === 2 ? "auto" : "hidden",
-          maxHeight: zoom === 2 ? "80vh" : "260px",
-          borderRadius: "6px",
-          border: `1px solid ${zoom === 2 ? G.gold : G.border}`,
-          cursor: "pointer",
+          overflow: zoom > 1 ? 'auto' : 'hidden',
+          maxHeight: zoom > 1 ? '80vh' : '260px',
+          borderRadius: '6px',
+          border: zoom > 1 ? `1px solid ${G.gold}` : `1px solid ${G.border}`,
+          cursor: 'pointer',
         }}
       >
         <img
           src={src} alt={alt}
           style={{
-            width: zoom === 2 ? "200%" : "100%",
-            display: "block",
-            objectFit: zoom === 1 ? "contain" : "unset",
-            transition: "width 0.25s ease",
+            width: zoom === 1 ? '100%' : `${zoom * 100}%`,
+            display: 'block',
+            objectFit: zoom === 1 ? 'contain' : 'unset',
+            transition: 'width 0.25s ease',
           }}
         />
       </div>
-      {zoom === 2 && (
-        <div style={{ textAlign: "center", fontFamily: G.fontMono, fontSize: "10px", color: G.muted, marginTop: "4px", letterSpacing: "1px" }}>
-          Scorri per esplorare • clicca per ridurre
+      {zoom > 1 && (
+        <div style={{ textAlign: 'center', fontFamily: G.fontMono, fontSize: '10px', color: G.muted, marginTop: '4px', letterSpacing: '1px' }}>
+          {zoom}× — scorri per esplorare • clicca per cambiare zoom
         </div>
       )}
     </div>

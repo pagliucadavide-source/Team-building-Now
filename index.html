@@ -5205,17 +5205,22 @@ function getYouTubeId(url) {
   // youtu.be/ID
   if (url.indexOf('youtu.be/') !== -1) {
     const part = url.split('youtu.be/')[1];
-    return part ? part.split(/[?&]/)[0].substring(0, 11) : null;
+    return part ? part.split(/[?&#]/)[0].substring(0, 11) : null;
+  }
+  // youtube.com/shorts/ID
+  if (url.indexOf('/shorts/') !== -1) {
+    const part = url.split('/shorts/')[1];
+    return part ? part.split(/[?&#]/)[0].substring(0, 11) : null;
   }
   // youtube.com/watch?v=ID
   if (url.indexOf('v=') !== -1) {
     const part = url.split('v=')[1];
-    return part ? part.split(/[?&]/)[0].substring(0, 11) : null;
+    return part ? part.split(/[?&#]/)[0].substring(0, 11) : null;
   }
   // youtube.com/embed/ID
   if (url.indexOf('/embed/') !== -1) {
     const part = url.split('/embed/')[1];
-    return part ? part.split(/[?&]/)[0].substring(0, 11) : null;
+    return part ? part.split(/[?&#]/)[0].substring(0, 11) : null;
   }
   return null;
 }

@@ -5201,14 +5201,11 @@ function ZoomableImage({ src, alt }) {
 // ─── YouTube ID extractor ─────────────────────────────────────────────────
 function getYouTubeId(url) {
   if (!url) return null;
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/,
-    /youtube\.com\/watch\?.*v=([\w-]{11})/,
-  ];
-  for (const p of patterns) {
-    const m = url.match(p);
-    if (m) return m[1];
-  }
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtu.be')) return u.pathname.slice(1).split('/')[0];
+    if (u.hostname.includes('youtube.com')) return u.searchParams.get('v');
+  } catch(e) {}
   return null;
 }
 
@@ -6150,4 +6147,102 @@ function App() {
             className="btn-outline"
             style={{ ...styles.btn, padding: "6px 16px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}
             onClick={() => { setView("home"); setPlayerGame(null); }}
-         
+          >
+            ⌂ HOME
+          </button>
+        )}
+
+        {/* Mute toggle — sempre visibile */}
+        <button
+          onClick={() => {
+            const next = !muted;
+            setMuted(next);
+            if (next) window.speechSynthesis?.cancel();
+          }}
+          title={muted ? "Riattiva audio" : "Disattiva audio"}
+          style={{
+            background: muted ? "rgba(192,57,43,0.15)" : "rgba(255,255,255,0.05)",
+            border: `1px solid ${muted ? "rgba(192,57,43,0.5)" : "rgba(255,255,255,0.12)"}`,
+            borderRadius: "50%", width: "36px", height: "36px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", fontSize: "17px", flexShrink: 0,
+            transition: "all 0.15s",
+          }}
+        >
+          {muted ? "🔇" : "🔊"}
+        </button>
+      </div>
+
+      {/* Views */}
+      {view === "home" && (
+        <HomeView
+          onPlayer={() => setView("player-login")}
+          onAdmin={() => setView("admin-login")}
+        />
+      )}
+
+      {view === "admin-login" && (
+        <AdminLogin
+          adminPassword={adminPassword}
+          onResetPassword={(p) => { savePwd(p); }}
+          onSuccess={() => { setAdminAuth(true); setView("admin-dashboard"); }}
+          onBack={() => setView("home")}
+        />
+      )}
+
+      {view === "admin-dashboard" && adminAuth && (
+        <div style={{ padding: "20px 0" }}>
+          <AdminDashboard
+            games={games}
+            adminPassword={adminPassword}
+            onEdit={(g) => { setEditingGame(games.find(x => x.id === g.id) || g); setView("admin-game"); }}
+            onNewGame={async () => { const g = EMPTY_GAME(); const ng = [...games, g]; await saveGames(ng); setEditingGame(g); setView("admin-game"); }}
+            onDeleteGame={async (id) => {
+              // Wipe all scores and agentlogs for this game
+              try {
+                const sk = await storage.list(`scores:${id}:`);
+                for (const k of (sk?.keys || [])) { try { await storage.delete(k); } catch {} }
+                const lk = await storage.list(`agentlog:${id}:`);
+                for (const k of (lk?.keys || [])) { try { await storage.delete(k); } catch {} }
+              } catch {}
+              saveGames(games.filter((g) => g.id !== id));
+            }}
+            onChangePassword={savePwd}
+            onBack={() => setView("home")}
+          />
+        </div>
+      )}
+
+      {view === "admin-game" && adminAuth && editingGame && (
+        <div style={{ padding: "20px 0" }}>
+          <AdminGameEditor
+            game={editingGame}
+            onSave={(g) => { const ng = games.map((x) => (x.id === g.id ? g : x)); saveGames(ng); setEditingGame(g); setView("admin-dashboard"); }}
+            onBack={() => setView("admin-dashboard")}
+          />
+        </div>
+      )}
+
+      {view === "player-login" && (
+        <PlayerLogin
+          games={games}
+          onEnter={(g, player) => { setPlayerGame({ ...g, _playerName: player.name, _playerCode: player.code }); setView("player-game"); }}
+          onBack={() => setView("home")}
+        />
+      )}
+
+      {view === "player-game" && playerGame && (
+        <PlayerGameView
+          game={playerGame}
+          onBack={() => { setPlayerGame(null); setView("home"); }}
+        />
+      )}
+    </div>
+    </MuteContext.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+</script>
+</body>
+</html>

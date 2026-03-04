@@ -5117,50 +5117,29 @@ function calcEnigmaScore(elapsedSeconds, expired) {
 
 // ─── ZOOMABLE IMAGE ──────────────────────────────────────────────────────────
 function ZoomableImage({ src, alt }) {
-  const [zoom, setZoom] = React.useState(1); // 1 | 2 | 4
+  const [zoom, setZoom] = React.useState(1);
   const next = () => setZoom(z => z === 1 ? 2 : z === 2 ? 4 : 1);
-  const label = zoom === 1 ? '2×' : zoom === 2 ? '4×' : '1×';
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
-      <div
-        onClick={next}
+    <div
+      onClick={next}
+      style={{
+        overflow: zoom > 1 ? 'auto' : 'hidden',
+        maxHeight: zoom > 1 ? '80vh' : '260px',
+        borderRadius: '6px',
+        border: zoom > 1 ? `1px solid ${G.gold}` : `1px solid ${G.border}`,
+        cursor: 'pointer',
+        marginTop: '8px',
+      }}
+    >
+      <img
+        src={src} alt={alt}
         style={{
-          position: 'absolute', top: '8px', right: '8px', zIndex: 10,
-          background: zoom > 1 ? G.gold : 'rgba(0,0,0,0.65)',
-          color: zoom > 1 ? '#000' : '#fff',
-          fontFamily: G.fontMono, fontSize: '12px', fontWeight: 'bold',
-          padding: '4px 10px', borderRadius: '4px', cursor: 'pointer',
-          userSelect: 'none', letterSpacing: '1px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+          width: zoom === 1 ? '100%' : `${zoom * 100}%`,
+          display: 'block',
+          objectFit: zoom === 1 ? 'contain' : 'unset',
+          transition: 'width 0.3s ease',
         }}
-      >
-        {label}
-      </div>
-      <div
-        onClick={next}
-        style={{
-          overflow: zoom > 1 ? 'auto' : 'hidden',
-          maxHeight: zoom > 1 ? '80vh' : '260px',
-          borderRadius: '6px',
-          border: zoom > 1 ? `1px solid ${G.gold}` : `1px solid ${G.border}`,
-          cursor: 'pointer',
-        }}
-      >
-        <img
-          src={src} alt={alt}
-          style={{
-            width: zoom === 1 ? '100%' : `${zoom * 100}%`,
-            display: 'block',
-            objectFit: zoom === 1 ? 'contain' : 'unset',
-            transition: 'width 0.25s ease',
-          }}
-        />
-      </div>
-      {zoom > 1 && (
-        <div style={{ textAlign: 'center', fontFamily: G.fontMono, fontSize: '10px', color: G.muted, marginTop: '4px', letterSpacing: '1px' }}>
-          {zoom}× — scorri per esplorare • clicca per cambiare zoom
-        </div>
-      )}
+      />
     </div>
   );
 }

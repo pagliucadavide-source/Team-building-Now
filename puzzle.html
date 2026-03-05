@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>Laboratorio Botanico — Enigma</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Josefin+Sans:wght@300;400;600&display=swap');
+
+:root {
+  --ivory:   #faf6ee;
+  --cream:   #f2ece0;
+  --sage:    #b8cbb4;
+  --mint:    #d4e8d8;
+  --moss:    #7a9e7e;
+  --forest:  #3d6b42;
+  --teal:    #4a8c7a;
+  --gold:    #c8a84a;
+  --amber:   #d4883a;
+  --rose:    #c87878;
+  --text:    #2e3a2e;
+  --muted:   #6a7a6a;
+  --border:  #c8d8c0;
+  --shadow:  rgba(46,58,46,0.12);
+  --display: 'Playfair Display', Georgia, serif;
+  --serif:   'Cormorant Garamond', Georgia, serif;
+  --sans:    'Josefin Sans', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+
+body {
+  background: linear-gradient(135deg, #e8f0e4 0%, #dde8d8 100%);
+  font-family: var(--serif);
+  overflow: hidden; height: 100vh; width: 100vw;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── ROOM ── */
+#room {
+  position: relative;
+  width: min(100vw, 720px);
+  height: min(100vh, 540px);
+  background:
+    radial-gradient(ellipse at 70% 0%, rgba(255,255,240,0.95) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 10%, rgba(240,255,240,0.6) 0%, transparent 40%),
+    linear-gradient(170deg, #f8f4ea 0%, #eef5e8 35%, #e4f0dc 100%);
+  border: 2px solid #c0d4b8;
+  border-radius: 2px;
+  box-shadow:
+    0 12px 60px rgba(46,58,46,0.18),
+    0 2px 0 rgba(255,255,255,0.8),
+    inset 0 0 100px rgba(200,230,200,0.15);
+  overflow: hidden;
+}
+
+/* glazed ceiling light strips */
+#room::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 5px;
+  background: linear-gradient(90deg, transparent, rgba(200,168,74,0.6), rgba(255,255,200,0.8), rgba(200,168,74,0.6), transparent);
+  z-index: 3;
+}
+
+/* greenhouse glass panes */
+#glass-panes {
+  position: absolute; top: 0; left: 50%; right: 0; height: 55%;
+  opacity: 0.18; pointer-events: none;
+}
+
+/* stone tile floor */
+#floor {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 30%;
+  background:
+    linear-gradient(rgba(210,220,205,0.4) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(210,220,205,0.4) 1px, transparent 1px),
+    linear-gradient(180deg, #dce8d4 0%, #c8d8c0 100%);
+  background-size: 60px 60px, 60px 60px, 100% 100%;
+  box-shadow: inset 0 6px 20px rgba(46,58,46,0.1);
+}
+#floor::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #b8ccb0, #d0e0c8, #b8ccb0);
+}
+
+/* light beams */
+.beam {
+  position: absolute; top: 0;
+  background: linear-gradient(180deg, rgba(255,252,220,0.25) 0%, transparent 80%);
+  pointer-events: none; transform-origin: top center;
+}
+
+/* ── CODE DISPLAY ── */
+#code-display {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,252,245,0.92);
+  border: 1.5px solid var(--border);
+  border-radius: 6px; padding: 7px 18px;
+  display: flex; gap: 7px; align-items: center; z-index: 50;
+  box-shadow: 0 4px 20px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+#code-label {
+  font-family: var(--sans); font-size: 9px; font-weight: 600;
+  color: var(--muted); letter-spacing: 3px; margin-right: 4px;
+}
+.code-digit {
+  width: 30px; height: 38px;
+  background: var(--cream); border: 1.5px solid var(--border); border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-size: 19px; font-weight: 700;
+  color: var(--border); transition: all 0.4s;
+}
+.code-digit.filled {
+  color: var(--forest); border-color: var(--moss);
+  background: rgba(122,158,126,0.08);
+  box-shadow: 0 0 0 3px rgba(122,158,126,0.12);
+}
+.code-digit.final {
+  color: var(--teal); border-color: var(--teal);
+  background: rgba(74,140,122,0.1);
+  box-shadow: 0 0 0 3px rgba(74,140,122,0.2);
+  animation: pop 0.5s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes pop { 0%{transform:scale(1.5)} 100%{transform:scale(1)} }
+
+/* ── SHELVES ── */
+.shelf {
+  position: absolute;
+  background: linear-gradient(180deg, #d8c8a8 0%, #c8b898 100%);
+  border-top: 2.5px solid #e0d0b0;
+  border-radius: 1px;
+  box-shadow: 0 3px 10px rgba(46,58,46,0.15), inset 0 1px 0 rgba(255,245,225,0.6);
+}
+
+/* ── DOOR ── */
+#door {
+  position: absolute; bottom: 30%; right: 7%;
+  width: 102px; height: 172px;
+  background: linear-gradient(175deg, #e8dcc8 0%, #d4c8aa 100%);
+  border: 2px solid #c8b890; border-bottom: none; border-radius: 2px 2px 0 0;
+  box-shadow: inset -3px 0 12px rgba(46,58,46,0.1), 3px 0 16px rgba(46,58,46,0.12);
+}
+#door::before {
+  content: ''; position: absolute;
+  top: 10px; left: 8px; right: 8px; height: 74px;
+  border: 1.5px solid rgba(180,160,120,0.4); border-radius: 1px;
+}
+#door::after {
+  content: ''; position: absolute;
+  bottom: 14px; left: 8px; right: 8px; height: 60px;
+  border: 1.5px solid rgba(180,160,120,0.4); border-radius: 1px;
+}
+#door-knob {
+  position: absolute; right: -9px; top: 50%;
+  width: 18px; height: 18px;
+  background: radial-gradient(circle at 38% 32%, #f0d878, #b89030);
+  border-radius: 50%;
+  box-shadow: 1px 2px 6px rgba(46,58,46,0.3), inset -1px -1px 3px rgba(100,60,0,0.2);
+  transform: translateY(-50%);
+}
+
+/* ── PADLOCK ── */
+#padlock {
+  position: absolute;
+  bottom: calc(30% + 74px); right: calc(7% + 35px);
+  width: 32px; height: 42px; z-index: 20;
+  transition: transform 0.7s cubic-bezier(0.22,1,0.36,1), opacity 0.5s;
+  filter: drop-shadow(1px 3px 5px rgba(46,58,46,0.25));
+}
+
+/* ── OBJECTS ── */
+.obj {
+  position: absolute; cursor: grab; z-index: 10;
+  transition: filter 0.2s, transform 0.15s;
+  touch-action: none;
+  filter: drop-shadow(1px 3px 8px rgba(46,58,46,0.2));
+}
+.obj:hover {
+  filter: drop-shadow(2px 5px 14px rgba(74,140,122,0.45)) brightness(1.06);
+  transform: translateY(-3px) rotate(1deg);
+}
+.obj.dragging {
+  cursor: grabbing; z-index: 100;
+  filter: drop-shadow(3px 8px 20px rgba(74,140,122,0.5)) brightness(1.1);
+  transform: scale(1.07) translateY(-5px);
+}
+.obj.locked { cursor: pointer; }
+.obj.unlocked { animation: unlockBounce 0.7s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes unlockBounce { 0%,100%{transform:translateY(0)} 40%{transform:translateY(-12px)} 70%{transform:translateY(-4px)} }
+.obj.placed { cursor: default; filter: drop-shadow(1px 3px 6px rgba(46,58,46,0.18)); }
+
+/* ── HOTSPOTS ── */
+.hotspot {
+  position: absolute;
+  border: 2px dashed rgba(122,158,126,0.3); border-radius: 6px;
+  z-index: 5; transition: all 0.25s;
+}
+.hotspot.active {
+  border-color: var(--moss); background: rgba(122,158,126,0.08);
+  box-shadow: 0 0 20px rgba(122,158,126,0.2);
+}
+.hotspot.solved {
+  border-color: rgba(74,140,122,0.4); background: rgba(74,140,122,0.05);
+}
+.lock-icon {
+  position: absolute; top: -20px; left: 50%;
+  transform: translateX(-50%); font-size: 12px;
+  pointer-events: none; transition: opacity 0.3s;
+}
+
+/* ── DECORATIVE ── */
+#nameplate {
+  position: absolute; top: 16px; left: 16px;
+  background: linear-gradient(135deg, #e8d898, #d4c070, #e8d898);
+  border: 1px solid #c8b050; border-radius: 3px;
+  padding: 5px 14px;
+  font-family: var(--sans); font-size: 9px; font-weight: 600;
+  color: #5a4a10; letter-spacing: 3px;
+  box-shadow: 0 2px 8px rgba(46,58,46,0.2), inset 0 1px 0 rgba(255,245,180,0.6);
+}
+
+/* ── HINT ── */
+#hint {
+  position: absolute; bottom: 9px; left: 50%; transform: translateX(-50%);
+  font-family: var(--serif); font-size: 13px; font-style: italic;
+  color: rgba(46,58,46,0.45); text-align: center;
+  pointer-events: none; z-index: 50; white-space: nowrap;
+}
+
+/* ── MODAL ── */
+#modal-bg {
+  position: absolute; inset: 0;
+  background: rgba(46,58,46,0.55);
+  z-index: 150; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  backdrop-filter: blur(3px);
+}
+#modal-bg.show { opacity: 1; pointer-events: all; }
+#modal {
+  background: var(--ivory);
+  border: 2px solid var(--border); border-radius: 8px;
+  padding: 30px 28px 24px;
+  width: min(92%, 420px);
+  box-shadow: 0 24px 70px rgba(46,58,46,0.3), 0 2px 0 rgba(255,255,255,0.9);
+  position: relative;
+}
+/* top botanical line decoration */
+#modal::before {
+  content: '— ✿ —';
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; color: rgba(122,158,126,0.5);
+  letter-spacing: 4px;
+}
+#modal-title {
+  font-family: var(--display); font-size: 14px; font-weight: 700;
+  color: var(--forest); letter-spacing: 1px;
+  text-align: center; margin-bottom: 16px; margin-top: 8px;
+  padding-bottom: 12px; border-bottom: 1px solid var(--border);
+}
+#modal-body {
+  font-family: var(--serif); font-size: 16px; color: var(--text);
+  line-height: 1.8; margin-bottom: 18px; text-align: center;
+}
+#modal-body code {
+  font-family: var(--display); font-size: 26px; font-weight: 700;
+  color: var(--teal); letter-spacing: 5px; display: block; margin: 6px 0;
+}
+#modal-body strong { color: var(--forest); }
+#modal-input {
+  width: 100%;
+  background: #f8f4ee; border: 2px solid var(--border); border-radius: 6px;
+  padding: 11px 16px;
+  font-family: var(--display); font-size: 20px; font-weight: 600;
+  color: var(--forest); letter-spacing: 4px; text-align: center; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: inset 0 2px 6px rgba(46,58,46,0.06);
+}
+#modal-input:focus {
+  border-color: var(--moss); box-shadow: inset 0 2px 6px rgba(46,58,46,0.06), 0 0 0 3px rgba(122,158,126,0.15);
+}
+#modal-input.error { border-color: var(--rose); color: var(--rose); animation: shake 0.35s; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+#modal-error {
+  font-family: var(--sans); font-size: 11px; font-weight: 400;
+  color: var(--rose); margin-top: 8px; min-height: 18px; text-align: center; letter-spacing: 0.5px;
+}
+#modal-confirm {
+  margin-top: 16px; width: 100%;
+  background: linear-gradient(180deg, #8ab88e, #6a9a6e);
+  border: none; border-radius: 6px; color: #fff;
+  font-family: var(--sans); font-size: 12px; font-weight: 600;
+  letter-spacing: 3px; padding: 13px;
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(74,140,122,0.3), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+#modal-confirm:hover {
+  background: linear-gradient(180deg, #9ac89e, #7aaa7e);
+  transform: translateY(-1px); box-shadow: 0 6px 18px rgba(74,140,122,0.4);
+}
+#modal-close {
+  position: absolute; top: 10px; right: 14px;
+  background: none; border: none; color: rgba(46,58,46,0.3);
+  font-size: 18px; cursor: pointer; transition: color 0.2s;
+}
+#modal-close:hover { color: var(--text); }
+
+/* ── SYMBOL PUZZLE ── */
+#symbol-puzzle { display: flex; gap: 10px; justify-content: center; margin: 16px 0; }
+.sym-wheel { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.sym-wheel label { font-family: var(--sans); font-size: 9px; font-weight: 600; color: var(--muted); letter-spacing: 1px; }
+.sym-btn {
+  width: 46px; height: 28px;
+  background: var(--mint); border: 1.5px solid var(--sage); border-radius: 5px;
+  color: var(--forest); font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; box-shadow: 0 1px 4px var(--shadow);
+}
+.sym-btn:hover { background: var(--sage); color: #fff; transform: translateY(-1px); }
+.sym-display {
+  width: 46px; height: 46px; background: var(--forest);
+  border: 2px solid var(--moss); border-radius: 6px;
+  color: #fff; font-family: var(--display); font-size: 17px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 10px rgba(46,58,46,0.2); transition: all 0.2s;
+}
+.sym-display.correct {
+  background: var(--teal); border-color: #4ab89a;
+  box-shadow: 0 0 14px rgba(74,140,122,0.4);
+}
+
+/* ── SEQUENCE PUZZLE ── */
+#seq-puzzle { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 16px 0; }
+.seq-btn {
+  width: 58px; height: 52px;
+  background: var(--cream); border: 2px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: var(--display); font-size: 18px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+.seq-btn:hover { background: var(--mint); border-color: var(--moss); color: var(--forest); transform: translateY(-3px); box-shadow: 0 5px 14px rgba(46,58,46,0.18); }
+.seq-btn.selected { background: var(--forest); border-color: var(--forest); color: #fff; box-shadow: 0 4px 14px rgba(61,107,66,0.4); }
+.seq-btn.wrong { background: rgba(200,120,120,0.1); border-color: var(--rose); color: var(--rose); }
+
+/* ── WIN OVERLAY ── */
+#win-overlay {
+  position: absolute; inset: 0;
+  background: rgba(46,58,46,0.88);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.9s;
+}
+#win-overlay.show { opacity: 1; pointer-events: all; }
+#win-overlay h1 {
+  font-family: var(--display); font-size: clamp(22px,5vw,40px); font-weight: 700;
+  color: #e8f4e8; letter-spacing: 4px; margin-bottom: 10px;
+  text-shadow: 0 0 30px rgba(122,158,126,0.6);
+}
+.win-code {
+  font-family: var(--display); font-size: 48px; font-weight: 700;
+  color: #b8e4b8; letter-spacing: 20px;
+  text-shadow: 0 0 28px rgba(122,200,130,0.5); margin: 14px 0 26px;
+}
+#restart-btn {
+  background: transparent; border: 2px solid rgba(184,228,184,0.4);
+  color: #b8e4b8; font-family: var(--sans); font-size: 11px; font-weight: 600;
+  padding: 11px 34px; letter-spacing: 3px; cursor: pointer;
+  transition: all 0.2s; border-radius: 4px;
+}
+#restart-btn:hover { background: rgba(122,158,126,0.2); border-color: #b8e4b8; }
+
+/* ── PARTICLES ── */
+.particle { position: absolute; border-radius: 50%; pointer-events: none; animation: prise 1.2s ease forwards; }
+@keyframes prise { 0%{opacity:1;transform:translate(0,0) scale(1)} 100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(0)} }
+
+/* ── TOOLTIP ── */
+.tooltip {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  background: var(--forest); color: #e8f4e8;
+  font-family: var(--sans); font-size: 11px; font-weight: 400; letter-spacing: 0.5px;
+  padding: 5px 12px; border-radius: 4px; white-space: nowrap;
+  pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 200;
+  box-shadow: 0 4px 14px rgba(46,58,46,0.25);
+}
+.tooltip::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--forest);
+}
+.obj:hover .tooltip { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="room">
+
+  <div id="floor"></div>
+
+  <!-- light beams from upper right (greenhouse windows) -->
+  <div class="beam" style="left:58%;width:90px;transform:skewX(-12deg);opacity:0.7;"></div>
+  <div class="beam" style="left:66%;width:60px;transform:skewX(-8deg);opacity:0.5;"></div>
+  <div class="beam" style="left:74%;width:50px;transform:skewX(-14deg);opacity:0.4;"></div>
+
+  <!-- greenhouse pane lines -->
+  <svg id="glass-panes" viewBox="0 0 360 300" fill="none" preserveAspectRatio="none">
+    <line x1="0" y1="0" x2="360" y2="300" stroke="rgba(200,168,74,0.25)" stroke-width="1.5"/>
+    <line x1="60" y1="0" x2="360" y2="240" stroke="rgba(200,168,74,0.2)" stroke-width="1"/>
+    <line x1="120" y1="0" x2="360" y2="180" stroke="rgba(200,168,74,0.15)" stroke-width="1"/>
+    <line x1="0" y1="60" x2="360" y2="300" stroke="rgba(200,168,74,0.15)" stroke-width="1"/>
+    <line x1="180" y1="0" x2="360" y2="120" stroke="rgba(200,168,74,0.12)" stroke-width="1"/>
+  </svg>
+
+  <div id="nameplate">LABORATORIO IV</div>
+
+  <!-- CODE DISPLAY -->
+  <div id="code-display">
+    <div id="code-label">CODICE</div>
+    <div class="code-digit" id="d0">—</div>
+    <div class="code-digit" id="d1">—</div>
+    <div class="code-digit" id="d2">—</div>
+    <div class="code-digit" id="d3">—</div>
+  </div>
+
+  <!-- SHELVES -->
+  <div class="shelf" style="left:3%;bottom:calc(30% + 102px);width:148px;height:11px;"></div>
+  <div class="shelf" style="left:3%;bottom:calc(30% + 172px);width:118px;height:9px;"></div>
+  <div class="shelf" style="left:23%;bottom:calc(30% + 120px);width:106px;height:9px;"></div>
+
+  <!-- WALL ART: botanical illustration frame -->
+  <div style="position:absolute;left:37%;top:7%;width:82px;height:68px;background:linear-gradient(135deg,#f0e8d8,#e4dcc8);border:3px solid #c8b898;border-radius:2px;box-shadow:2px 3px 14px rgba(46,58,46,0.2),inset 0 0 0 4px #f8f4ec;">
+    <svg style="position:absolute;inset:8px;" viewBox="0 0 60 50" fill="none">
+      <!-- simple leaf/fern botanical -->
+      <path d="M30 45 Q30 25 20 15" stroke="#7a9e7e" stroke-width="1.5" fill="none"/>
+      <path d="M20 15 Q10 8 8 2" stroke="#7a9e7e" stroke-width="1.5" fill="none"/>
+      <path d="M20 15 Q12 20 10 28" stroke="#7a9e7e" stroke-width="1" fill="none"/>
+      <path d="M24 25 Q14 22 10 16" stroke="#7a9e7e" stroke-width="1" fill="none"/>
+      <path d="M27 33 Q18 32 15 26" stroke="#7a9e7e" stroke-width="1" fill="none"/>
+      <path d="M30 45 Q30 25 40 15" stroke="#7a9e7e" stroke-width="1.5" fill="none"/>
+      <path d="M40 15 Q50 8 52 2" stroke="#7a9e7e" stroke-width="1.5" fill="none"/>
+      <path d="M40 15 Q48 20 50 28" stroke="#7a9e7e" stroke-width="1" fill="none"/>
+      <path d="M36 25 Q46 22 50 16" stroke="#7a9e7e" stroke-width="1" fill="none"/>
+      <path d="M33 33 Q42 32 45 26" stroke="#7a9e7e" stroke-width="1" fill="none"/>
+    </svg>
+  </div>
+
+  <!-- Small potted plant on shelf area -->
+  <svg style="position:absolute;left:42%;bottom:calc(30% + 8px);pointer-events:none;" width="32" height="48" viewBox="0 0 32 48" fill="none">
+    <path d="M10 30 Q16 20 22 14 Q18 22 24 28" fill="none" stroke="#7a9e7e" stroke-width="1.5"/>
+    <path d="M16 30 Q10 18 8 10 Q14 20 12 30" fill="#a8c8a0" opacity="0.6"/>
+    <path d="M16 30 Q22 18 24 10 Q18 20 20 30" fill="#a8c8a0" opacity="0.6"/>
+    <path d="M16 30 Q16 20 16 14" stroke="#7a9e7e" stroke-width="1.5" fill="none"/>
+    <path d="M8 35 Q8 30 16 30 Q24 30 24 35 L22 42 H10 Z" fill="#c8a060" stroke="#a88040" stroke-width="1"/>
+    <ellipse cx="16" cy="35" rx="8" ry="3" fill="#b89050" opacity="0.5"/>
+  </svg>
+
+  <!-- DOOR -->
+  <div id="door">
+    <div id="door-knob"></div>
+  </div>
+
+  <!-- PADLOCK -->
+  <div id="padlock">
+    <svg viewBox="0 0 32 42" fill="none">
+      <rect x="3" y="17" width="26" height="23" rx="3" fill="url(#padGrad)" stroke="#c8b070" stroke-width="1.5"/>
+      <path d="M9 17V12C9 7.8 12.5 4.5 16 4.5C19.5 4.5 23 7.8 23 12V17" stroke="#b8a060" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <circle cx="16" cy="28" r="4.5" fill="#d4c080" stroke="#b89040" stroke-width="1"/>
+      <rect x="14" y="28" width="4" height="6" rx="1.5" fill="#d4c080"/>
+      <defs>
+        <linearGradient id="padGrad" x1="3" y1="17" x2="29" y2="40" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#f0d878"/>
+          <stop offset="50%" stop-color="#d4a843"/>
+          <stop offset="100%" stop-color="#a87c28"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+
+  <!-- HOTSPOTS -->
+  <div class="hotspot" id="hs-candle" style="left:4%;bottom:calc(30% + 110px);width:54px;height:60px;" data-item="candle" data-digit="0" data-value="4">
+    <div class="lock-icon" id="li-candle">🔒</div>
+  </div>
+  <div class="hotspot" id="hs-book" style="left:24%;bottom:calc(30% + 128px);width:58px;height:46px;" data-item="book" data-digit="1" data-value="7">
+    <div class="lock-icon" id="li-book">🔒</div>
+  </div>
+  <div class="hotspot" id="hs-cpu" style="left:46%;bottom:calc(30% + 55px);width:58px;height:58px;" data-item="cpu" data-digit="2" data-value="2">
+    <div class="lock-icon" id="li-cpu">🔒</div>
+  </div>
+  <div class="hotspot" id="hs-key" style="right:calc(7% + 15px);bottom:calc(30% + 148px);width:32px;height:34px;" data-item="key" data-digit="3" data-value="9">
+    <div class="lock-icon" id="li-key">🔒</div>
+  </div>
+
+  <!-- SLOT LABELS -->
+  <div style="position:absolute;left:2%;bottom:calc(30% + 175px);font-family:var(--sans);font-size:8px;font-weight:600;color:rgba(61,107,66,0.3);letter-spacing:1px;pointer-events:none;">I</div>
+  <div style="position:absolute;left:23%;bottom:calc(30% + 178px);font-family:var(--sans);font-size:8px;font-weight:600;color:rgba(61,107,66,0.3);letter-spacing:1px;pointer-events:none;">II</div>
+  <div style="position:absolute;left:44%;bottom:calc(30% + 118px);font-family:var(--sans);font-size:8px;font-weight:600;color:rgba(61,107,66,0.3);letter-spacing:1px;pointer-events:none;">III</div>
+  <div style="position:absolute;right:calc(7% - 10px);bottom:calc(30% + 186px);font-family:var(--sans);font-size:8px;font-weight:600;color:rgba(61,107,66,0.3);letter-spacing:1px;pointer-events:none;">IV</div>
+
+  <!-- ── OBJECTS ── -->
+
+  <!-- BECHER (glass flask, bright) -->
+  <div class="obj locked" id="candle" style="left:58%;bottom:calc(30% + 10px);" data-type="candle">
+    <div class="tooltip">Becher — clicca per sbloccare</div>
+    <svg width="42" height="58" viewBox="0 0 42 58" fill="none">
+      <!-- glass body -->
+      <path d="M9 6 H33 L37 52 H5 Z" fill="rgba(200,235,245,0.55)" stroke="#88b8cc" stroke-width="1.5"/>
+      <!-- liquid fill (teal/mint) -->
+      <path d="M11 28 L31 28 L34 52 H8 Z" fill="rgba(100,195,185,0.4)"/>
+      <path d="M11 28 Q21 24 31 28" stroke="rgba(80,175,165,0.7)" stroke-width="1.5"/>
+      <!-- bubbles -->
+      <circle cx="15" cy="38" r="2.5" fill="rgba(100,195,185,0.55)"/>
+      <circle cx="24" cy="44" r="2"   fill="rgba(100,195,185,0.45)"/>
+      <circle cx="19" cy="34" r="1.5" fill="rgba(100,195,185,0.65)"/>
+      <!-- spout -->
+      <path d="M9 6 L5 2" stroke="#88b8cc" stroke-width="2" stroke-linecap="round"/>
+      <rect x="3" y="0" width="10" height="3" rx="1" fill="#88b8cc"/>
+      <!-- measure marks -->
+      <line x1="31" y1="16" x2="35" y2="16" stroke="#88b8cc" stroke-width="1" opacity="0.5"/>
+      <line x1="31" y1="28" x2="35" y2="28" stroke="#88b8cc" stroke-width="1" opacity="0.5"/>
+      <line x1="31" y1="40" x2="35" y2="40" stroke="#88b8cc" stroke-width="1" opacity="0.5"/>
+      <!-- glass shine -->
+      <path d="M13 8 L15 50" stroke="rgba(255,255,255,0.45)" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <!-- TOME (linen-covered science book) -->
+  <div class="obj locked" id="book" style="left:72%;bottom:calc(30% + 10px);" data-type="book">
+    <div class="tooltip">Manuale scientifico — clicca per sbloccare</div>
+    <svg width="46" height="56" viewBox="0 0 46 56" fill="none">
+      <!-- cover -->
+      <rect x="4" y="4" width="38" height="48" rx="2" fill="#c8d8b8" stroke="#a8b898" stroke-width="1.5"/>
+      <!-- spine -->
+      <rect x="4" y="4" width="9" height="48" fill="#b8c8a8" rx="2"/>
+      <rect x="6" y="6" width="5" height="44" fill="#a8b898" rx="1"/>
+      <!-- pages -->
+      <rect x="13" y="6" width="27" height="44" fill="#faf6ee" rx="1"/>
+      <!-- text lines -->
+      <line x1="16" y1="15" x2="37" y2="15" stroke="#b8c8a8" stroke-width="0.8"/>
+      <line x1="16" y1="19" x2="37" y2="19" stroke="#b8c8a8" stroke-width="0.8"/>
+      <line x1="16" y1="23" x2="32" y2="23" stroke="#b8c8a8" stroke-width="0.8"/>
+      <line x1="16" y1="27" x2="37" y2="27" stroke="#b8c8a8" stroke-width="0.8"/>
+      <line x1="16" y1="31" x2="29" y2="31" stroke="#b8c8a8" stroke-width="0.8"/>
+      <!-- emblem -->
+      <circle cx="25" cy="43" r="6" fill="none" stroke="#7a9e7e" stroke-width="1.5"/>
+      <text x="25" y="47" text-anchor="middle" font-size="8" fill="#7a9e7e" font-family="serif">VIII</text>
+      <!-- clasp -->
+      <rect x="37" y="23" width="7" height="8" rx="1.5" fill="#d4a843" stroke="#b08828" stroke-width="0.5"/>
+      <!-- spine decorations -->
+      <line x1="4" y1="18" x2="13" y2="18" stroke="rgba(200,168,74,0.4)" stroke-width="0.5"/>
+      <line x1="4" y1="38" x2="13" y2="38" stroke="rgba(200,168,74,0.4)" stroke-width="0.5"/>
+      <!-- title block -->
+      <rect x="16" y="7" width="22" height="5" rx="1" fill="#d4e8d0"/>
+    </svg>
+  </div>
+
+  <!-- ORRERY / ATOM -->
+  <div class="obj locked" id="cpu" style="left:33%;bottom:calc(30% + 10px);" data-type="cpu">
+    <div class="tooltip">Modello atomico — clicca per sbloccare</div>
+    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+      <!-- pedestal -->
+      <rect x="20" y="50" width="16" height="5" rx="1.5" fill="#c8a060" stroke="#a88040" stroke-width="1"/>
+      <rect x="24" y="45" width="8" height="7" fill="#c8a060" stroke="#a88040" stroke-width="0.5"/>
+      <!-- outer glow -->
+      <circle cx="28" cy="27" r="23" fill="rgba(200,230,215,0.15)"/>
+      <!-- orbits — soft green-gold -->
+      <ellipse cx="28" cy="27" rx="22" ry="9" fill="none" stroke="#b8d4b0" stroke-width="1.3" stroke-dasharray="3 2"/>
+      <ellipse cx="28" cy="27" rx="22" ry="9" fill="none" stroke="#b8d4b0" stroke-width="1.3" stroke-dasharray="3 2" transform="rotate(60 28 27)"/>
+      <ellipse cx="28" cy="27" rx="22" ry="9" fill="none" stroke="#b8d4b0" stroke-width="1.3" stroke-dasharray="3 2" transform="rotate(120 28 27)"/>
+      <!-- nucleus -->
+      <circle cx="28" cy="27" r="7" fill="rgba(122,158,126,0.2)"/>
+      <circle cx="28" cy="27" r="5" fill="#7a9e7e" stroke="#5a7e5e" stroke-width="1.5"/>
+      <circle cx="28" cy="27" r="2.5" fill="#a8c8a0"/>
+      <!-- electrons -->
+      <circle cx="50" cy="27" r="3.5" fill="#d4a843" stroke="#b08828" stroke-width="1"/>
+      <circle cx="17" cy="11" r="3.5" fill="#d4a843" stroke="#b08828" stroke-width="1"/>
+      <circle cx="17" cy="43" r="3.5" fill="#d4a843" stroke="#b08828" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <!-- KEY (bright brass) -->
+  <div class="obj locked" id="key" style="left:46%;bottom:calc(30% + 60px);" data-type="key">
+    <div class="tooltip">Chiave dorata — clicca per sbloccare</div>
+    <svg width="28" height="64" viewBox="0 0 28 64" fill="none">
+      <!-- head -->
+      <circle cx="14" cy="14" r="12" fill="none" stroke="url(#keyG)" stroke-width="2.5"/>
+      <circle cx="14" cy="14" r="7"  fill="none" stroke="url(#keyG)" stroke-width="2"/>
+      <circle cx="14" cy="14" r="3"  fill="url(#keyG)"/>
+      <!-- spokes -->
+      <line x1="14" y1="2"  x2="14" y2="7"  stroke="url(#keyG)" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="14" y1="21" x2="14" y2="26" stroke="url(#keyG)" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="2"  y1="14" x2="7"  y2="14" stroke="url(#keyG)" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="21" y1="14" x2="26" y2="14" stroke="url(#keyG)" stroke-width="1.5" stroke-linecap="round"/>
+      <!-- shaft -->
+      <rect x="12.5" y="26" width="3" height="30" fill="url(#keyG)" rx="1"/>
+      <!-- teeth -->
+      <rect x="15.5" y="38" width="7"  height="3.5" rx="1" fill="url(#keyG)"/>
+      <rect x="15.5" y="46" width="5"  height="3"   rx="1" fill="url(#keyG)"/>
+      <rect x="15.5" y="52" width="6"  height="3"   rx="1" fill="url(#keyG)"/>
+      <defs>
+        <linearGradient id="keyG" x1="0" y1="0" x2="28" y2="64" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"  stop-color="#f8e888"/>
+          <stop offset="45%" stop-color="#d4a843"/>
+          <stop offset="100%" stop-color="#9a7428"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+
+  <!-- HINT -->
+  <div id="hint">Clicca su ogni oggetto per risolvere il suo enigma e sbloccarlo</div>
+
+  <!-- MODAL -->
+  <div id="modal-bg">
+    <div id="modal">
+      <button id="modal-close" onclick="closeModal()">✕</button>
+      <div id="modal-title"></div>
+      <div id="modal-body"></div>
+      <div id="modal-extra"></div>
+      <div id="modal-error"></div>
+      <button id="modal-confirm" onclick="checkAnswer()">CONFERMA</button>
+    </div>
+  </div>
+
+  <!-- WIN OVERLAY -->
+  <div id="win-overlay">
+    <div style="font-family:var(--sans);font-size:10px;font-weight:600;color:rgba(184,228,184,0.5);letter-spacing:4px;margin-bottom:8px;">ENIGMA COMPLETATO</div>
+    <h1>🔓 Laboratorio Aperto</h1>
+    <p style="font-family:var(--serif);font-style:italic;font-size:16px;color:rgba(232,244,232,0.7);margin-bottom:6px;">Il codice del lucchetto è:</p>
+    <div class="win-code" id="win-code-display"></div>
+    <p style="font-family:var(--sans);font-size:10px;font-weight:600;color:rgba(184,228,184,0.4);letter-spacing:3px;">LA PORTA È APERTA</p>
+    <br>
+    <button id="restart-btn" onclick="restartPuzzle()">↺ RICOMINCIA</button>
+  </div>
+</div>
+
+<script>
+const ENIGMAS = {
+  candle: {
+    type: 'symbols',
+    title: 'BECHER — ALLINEA GLI ELEMENTI',
+    body: 'Disponi i simboli chimici nell\'ordine della tavola periodica:<br><strong>Idrogeno → Carbonio → Ossigeno → Azoto</strong>',
+    wheels: [
+      { symbols: ['H','He','Li','C','N','O'], target: 'H' },
+      { symbols: ['C','N','O','F','Ne','H'], target: 'C' },
+      { symbols: ['O','N','C','H','F','S'],  target: 'O' },
+      { symbols: ['N','O','C','H','P','S'],  target: 'N' },
+    ],
+    digit: 0, value: '4',
+  },
+  book: {
+    type: 'text',
+    title: 'MANUALE — DOMANDA SCIENTIFICA',
+    body: 'Quanti <strong>bit</strong> compongono un byte?<br>Inserisci il numero:',
+    answer: '8',
+    digit: 1, value: '7',
+  },
+  cpu: {
+    type: 'sequence',
+    title: 'MODELLO ATOMICO — SERIE NUMERICA',
+    body: 'Completa la successione di Fibonacci:<br><span style="font-family:var(--display);font-size:17px;color:var(--forest);letter-spacing:2px;">1, 1, 2, 3, 5, 8, 13, <strong>?</strong>, 34</span>',
+    options: [18, 20, 21, 22, 23, 25],
+    answer: 21,
+    digit: 2, value: '2',
+  },
+  key: {
+    type: 'text',
+    title: 'CHIAVE — DECODIFICA BINARIO',
+    body: 'Converti in decimale il numero binario:<br><code>1001</code>',
+    answer: '9',
+    digit: 3, value: '9',
+  },
+};
+
+const placed={candle:false,book:false,cpu:false,key:false};
+const unlocked={candle:false,book:false,cpu:false,key:false};
+const OBJECTS=['candle','book','cpu','key'];
+let symState={}, currentItem=null;
+
+function openEnigma(id) {
+  if (placed[id]) return;
+  currentItem = id;
+  const e = ENIGMAS[id];
+  document.getElementById('modal-title').textContent = e.title;
+  document.getElementById('modal-body').innerHTML = e.body;
+  document.getElementById('modal-error').textContent = '';
+  const extra = document.getElementById('modal-extra');
+  extra.innerHTML = '';
+
+  if (e.type==='text') {
+    extra.innerHTML=`<input id="modal-input" type="text" inputmode="numeric" placeholder="risposta…" autocomplete="off" spellcheck="false"/>`;
+    setTimeout(()=>document.getElementById('modal-input')?.focus(),100);
+    document.getElementById('modal-input').addEventListener('keydown',ev=>{if(ev.key==='Enter')checkAnswer();});
+  } else if (e.type==='symbols') {
+    symState[id]=e.wheels.map(()=>0);
+    renderSymbols(id);
+  } else if (e.type==='sequence') {
+    renderSequence(id);
+  }
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+function closeModal() { document.getElementById('modal-bg').classList.remove('show'); currentItem=null; }
+
+function checkAnswer() {
+  if (!currentItem) return;
+  const e = ENIGMAS[currentItem];
+  if (e.type==='text') {
+    const v = document.getElementById('modal-input')?.value?.trim();
+    if (v===e.answer) { solveEnigma(currentItem); }
+    else {
+      const inp=document.getElementById('modal-input');
+      inp.classList.add('error');
+      document.getElementById('modal-error').textContent='✗ Risposta errata — riprova.';
+      setTimeout(()=>inp.classList.remove('error'),500);
+    }
+  } else if (e.type==='symbols') {
+    const ok=e.wheels.every((w,i)=>w.symbols[symState[currentItem][i]]===w.target);
+    if (ok) solveEnigma(currentItem);
+    else document.getElementById('modal-error').textContent='✗ Combinazione non corretta — riprova.';
+  } else {
+    document.getElementById('modal-error').textContent='✗ Seleziona il numero corretto.';
+  }
+}
+
+function renderSymbols(id) {
+  const e=ENIGMAS[id];
+  document.getElementById('modal-extra').innerHTML='<div id="symbol-puzzle"></div>';
+  const p=document.getElementById('symbol-puzzle');
+  e.wheels.forEach((w,wi)=>{
+    const col=document.createElement('div'); col.className='sym-wheel';
+    col.innerHTML=`<label>${wi+1}</label>`;
+    const up=document.createElement('button'); up.className='sym-btn'; up.textContent='▲';
+    up.onclick=()=>{symState[id][wi]=(symState[id][wi]+1)%w.symbols.length;upSym(id,wi);};
+    const d=document.createElement('div'); d.className='sym-display'; d.id=`sym-${id}-${wi}`; d.textContent=w.symbols[0];
+    const dn=document.createElement('button'); dn.className='sym-btn'; dn.textContent='▼';
+    dn.onclick=()=>{symState[id][wi]=(symState[id][wi]-1+w.symbols.length)%w.symbols.length;upSym(id,wi);};
+    col.appendChild(up); col.appendChild(d); col.appendChild(dn); p.appendChild(col);
+  });
+}
+
+function upSym(id,wi) {
+  const e=ENIGMAS[id], sym=e.wheels[wi].symbols[symState[id][wi]];
+  const d=document.getElementById(`sym-${id}-${wi}`);
+  d.textContent=sym; d.classList.toggle('correct',sym===e.wheels[wi].target);
+  if (e.wheels.every((w,i)=>w.symbols[symState[id][i]]===w.target)) setTimeout(()=>solveEnigma(id),350);
+}
+
+function renderSequence(id) {
+  const e=ENIGMAS[id];
+  document.getElementById('modal-extra').innerHTML='<div id="seq-puzzle"></div>';
+  const p=document.getElementById('seq-puzzle');
+  e.options.forEach(opt=>{
+    const b=document.createElement('button'); b.className='seq-btn'; b.textContent=opt;
+    b.onclick=()=>{
+      document.querySelectorAll('.seq-btn').forEach(x=>x.classList.remove('selected','wrong'));
+      if(opt===e.answer){b.classList.add('selected');setTimeout(()=>solveEnigma(id),350);}
+      else{b.classList.add('wrong');document.getElementById('modal-error').textContent='✗ Non è il numero corretto.';}
+    };
+    p.appendChild(b);
+  });
+}
+
+function solveEnigma(id) {
+  unlocked[id]=true;
+  const el=document.getElementById(id);
+  el.classList.remove('locked'); el.classList.add('unlocked');
+  el.querySelector('.tooltip').textContent='Trascinami nel suo posto!';
+  const li=document.getElementById('li-'+id); if(li) li.textContent='✦';
+  closeModal();
+  const rr=room.getBoundingClientRect(), er=el.getBoundingClientRect();
+  spawnParticles(er.left-rr.left+er.width/2, er.top-rr.top+er.height/2);
+  updateHint();
+}
+
+let dragging=null,dragOffX=0,dragOffY=0,origX={},origY={};
+const room=document.getElementById('room');
+
+function startDrag(e,el) {
+  if(!unlocked[el.id]){openEnigma(el.id);return;}
+  if(placed[el.id]) return;
+  dragging=el; el.classList.add('dragging');
+  const rr=room.getBoundingClientRect(),er=el.getBoundingClientRect();
+  const cx=e.touches?e.touches[0].clientX:e.clientX, cy=e.touches?e.touches[0].clientY:e.clientY;
+  dragOffX=cx-er.left; dragOffY=cy-er.top;
+  el.style.left=(er.left-rr.left)+'px'; el.style.top=(er.top-rr.top)+'px'; el.style.bottom='auto'; el.style.zIndex=100;
+  document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',endDrag);
+  document.addEventListener('touchmove',onMove,{passive:false}); document.addEventListener('touchend',endDrag);
+  e.preventDefault();
+}
+
+function onMove(e) {
+  if(!dragging) return; e.preventDefault();
+  const rr=room.getBoundingClientRect();
+  const cx=e.touches?e.touches[0].clientX:e.clientX, cy=e.touches?e.touches[0].clientY:e.clientY;
+  const x=Math.max(0,Math.min(room.offsetWidth-dragging.offsetWidth, cx-rr.left-dragOffX));
+  const y=Math.max(0,Math.min(room.offsetHeight-dragging.offsetHeight, cy-rr.top-dragOffY));
+  dragging.style.left=x+'px'; dragging.style.top=y+'px';
+  document.querySelectorAll('.hotspot').forEach(hs=>{
+    hs.classList.toggle('active', hs.dataset.item===dragging.id && dist(dragging,hs)<60);
+  });
+}
+
+function endDrag(e) {
+  if(!dragging) return;
+  ['mousemove','mouseup','touchmove','touchend'].forEach(ev=>document.removeEventListener(ev,ev==='mousemove'||ev==='mouseup'?onMove:endDrag));
+  document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',endDrag);
+  document.removeEventListener('touchmove',onMove); document.removeEventListener('touchend',endDrag);
+  const el=dragging; dragging=null; el.classList.remove('dragging');
+  const hs=document.querySelector(`.hotspot[data-item="${el.id}"]`);
+  if(hs&&dist(el,hs)<60) snapTo(el,hs);
+  else { el.style.left=origX[el.id]+'px'; el.style.top=origY[el.id]+'px'; }
+  document.querySelectorAll('.hotspot').forEach(h=>h.classList.remove('active'));
+}
+
+function dist(el,hs) {
+  const rr=room.getBoundingClientRect(),er=el.getBoundingClientRect(),hr=hs.getBoundingClientRect();
+  return Math.hypot((er.left+er.width/2)-(hr.left+hr.width/2),(er.top+er.height/2)-(hr.top+hr.height/2));
+}
+
+function snapTo(el,hs) {
+  const rr=room.getBoundingClientRect(),hr=hs.getBoundingClientRect();
+  el.style.left=(hr.left-rr.left+(hr.width-el.offsetWidth)/2)+'px';
+  el.style.top=(hr.top-rr.top+(hr.height-el.offsetHeight)/2)+'px';
+  el.classList.add('placed'); hs.classList.add('solved'); placed[el.id]=true;
+  const li=document.getElementById('li-'+el.id); if(li) li.style.display='none';
+  const dEl=document.getElementById('d'+hs.dataset.digit);
+  dEl.textContent=hs.dataset.value; dEl.classList.add('filled');
+  spawnParticles(parseFloat(el.style.left)+el.offsetWidth/2, parseFloat(el.style.top)+el.offsetHeight/2);
+  updateHint(); checkWin();
+}
+
+function spawnParticles(x,y) {
+  const cols=['#d4a843','#7a9e7e','#a8c8a0','#c8d898','#f0d878','#88c8a0'];
+  for(let i=0;i<18;i++){
+    const p=document.createElement('div'); p.className='particle';
+    const a=(Math.PI*2*i)/18, d=26+Math.random()*52;
+    const s=2.5+Math.random()*4;
+    p.style.cssText=`left:${x}px;top:${y}px;width:${s}px;height:${s}px;background:${cols[i%cols.length]};--dx:${Math.cos(a)*d}px;--dy:${Math.sin(a)*d}px`;
+    room.appendChild(p); setTimeout(()=>p.remove(),1300);
+  }
+}
+
+function updateHint() {
+  const rem=OBJECTS.filter(id=>!placed[id]);
+  const hasUnlocked=rem.some(id=>unlocked[id]);
+  const h=document.getElementById('hint');
+  if(!rem.length){h.textContent='';return;}
+  h.textContent = hasUnlocked
+    ? '✦ Oggetto sbloccato — trascinalo nella sua posizione'
+    : 'Clicca su ogni oggetto per risolvere il suo enigma';
+}
+
+function checkWin() {
+  if(!OBJECTS.every(id=>placed[id])) return;
+  document.querySelectorAll('.code-digit').forEach(d=>d.classList.add('final'));
+  document.getElementById('win-code-display').textContent=OBJECTS.map(id=>ENIGMAS[id].value).join('  ');
+  document.getElementById('padlock').style.cssText='transform:translateY(-30px) rotate(30deg);opacity:0';
+  setTimeout(()=>document.getElementById('win-overlay').classList.add('show'),1000);
+}
+
+function restartPuzzle() {
+  OBJECTS.forEach(id=>{
+    placed[id]=false; unlocked[id]=false;
+    const el=document.getElementById(id);
+    el.classList.remove('placed','unlocked'); el.classList.add('locked');
+    el.style.left=origX[id]+'px'; el.style.top=origY[id]+'px'; el.style.bottom='auto';
+    const li=document.getElementById('li-'+id); if(li){li.textContent='🔒';li.style.display='';}
+  });
+  document.querySelectorAll('.hotspot').forEach(h=>h.classList.remove('solved','active'));
+  document.querySelectorAll('.code-digit').forEach(d=>{d.textContent='—';d.classList.remove('filled','final');});
+  document.getElementById('padlock').style.cssText='';
+  document.getElementById('win-overlay').classList.remove('show');
+  document.getElementById('hint').textContent='Clicca su ogni oggetto per risolvere il suo enigma e sbloccarlo';
+  symState={};
+}
+
+window.addEventListener('load',()=>{
+  OBJECTS.forEach(id=>{
+    const el=document.getElementById(id);
+    const r=el.getBoundingClientRect(),rr=room.getBoundingClientRect();
+    origX[id]=r.left-rr.left; origY[id]=r.top-rr.top;
+    el.style.cssText+=`;position:absolute;left:${origX[id]}px;top:${origY[id]}px;bottom:auto`;
+    el.addEventListener('mousedown',e=>startDrag(e,el));
+    el.addEventListener('touchstart',e=>startDrag(e,el),{passive:false});
+  });
+});
+</script>
+</body>
+</html>

@@ -1096,6 +1096,23 @@ function EnigmaEditor({ enigma, onChange, onDelete, onDuplicate, index }) {
             ) : null}
           </div>
 
+          {/* Puzzle interattivo iframe */}
+          <div style={{ marginTop: "14px" }}>
+            <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.muted, letterSpacing: "1px", marginBottom: "6px" }}>🧩 PUZZLE INTERATTIVO (opzionale)</div>
+            <input
+              type="url"
+              value={enigma.puzzleUrl || ""}
+              onChange={(e) => upd("puzzleUrl", e.target.value)}
+              placeholder="https://tuosito.vercel.app/puzzle.html"
+              style={{ background: "#1a1a1a", color: "#e8e0d0", border: "1px solid #333", borderRadius: "4px", padding: "8px 12px", fontFamily: "inherit", fontSize: "13px", width: "100%", outline: "none" }}
+            />
+            {enigma.puzzleUrl && (
+              <div style={{ marginTop: "6px", fontFamily: G.fontMono, fontSize: "10px", color: G.muted }}>
+                ✓ Il puzzle apparirà inline durante il gioco — il giocatore inserirà il codice nel campo risposta
+              </div>
+            )}
+          </div>
+
           <hr style={styles.divider} />
           <h4 style={{ ...styles.title, fontSize: "14px", marginBottom: "12px" }}>🧩 PUZZLE / QUIZ</h4>
           <Input label="Testo dell'Enigma o Domanda" value={enigma.puzzle} onChange={(v) => upd("puzzle", v)} rows={3} placeholder="Descrivi la sfida o il quiz che il giocatore deve risolvere..." />
@@ -6007,6 +6024,28 @@ function PlayerGameView({ game, onBack }) {
               )}
 
               {enigma.youtube && <YouTubePlayer url={enigma.youtube} autoplay />}
+
+              {/* Puzzle interattivo inline */}
+              {enigma.puzzleUrl && (
+                <div style={{ marginBottom: "16px", borderRadius: "8px", overflow: "hidden",
+                  border: "1px solid rgba(201,168,76,0.3)",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>
+                  <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.muted,
+                    padding: "8px 12px", background: "rgba(0,0,0,0.3)",
+                    borderBottom: "1px solid rgba(201,168,76,0.2)", letterSpacing: "1px" }}>
+                    🧩 PUZZLE INTERATTIVO — risolvi e inserisci il codice qui sotto
+                  </div>
+                  <iframe
+                    src={enigma.puzzleUrl}
+                    width="100%"
+                    height="520"
+                    frameBorder="0"
+                    scrolling="no"
+                    style={{ display: "block", width: "100%" }}
+                    allow="camera"
+                  />
+                </div>
+              )}
 
               <div style={{ ...styles.card }}>
                 <Input label="La tua risposta" value={answer} onChange={setAnswer} placeholder="Inserisci qui la risposta…" style={{ fontSize: "18px" }} />

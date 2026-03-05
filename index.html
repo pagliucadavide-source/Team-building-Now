@@ -1383,19 +1383,12 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
       ? "Criteri: " + enigma.aiEvalCriteria
       : "Valuta coinvolgimento, postura, espressione e approccio al problema.";
 
-    const prompt = "Sei un valutatore esperto di team building e formazione.
-" +
-      "Stai analizzando lo scatto n." + snapIndex + " di una sfida video.
-" +
-      "Giocatore: " + playerName + " — Team: " + gameName + "
-" +
-      "Sfida: " + (enigma.challenge || "Esercizio pratico") + "
-" +
-      criteria + "
-
-" +
-      "Guarda attentamente l'immagine. Rispondi SOLO con JSON valido senza testo extra:
-" +
+    const prompt = "Sei un valutatore esperto di team building e formazione.\n" +
+      "Stai analizzando lo scatto n." + snapIndex + " di una sfida video.\n" +
+      "Giocatore: " + playerName + " — Team: " + gameName + "\n" +
+      "Sfida: " + (enigma.challenge || "Esercizio pratico") + "\n" +
+      criteria + "\n\n" +
+      "Guarda attentamente l'immagine. Rispondi SOLO con JSON valido senza testo extra:\n" +
       '{"punteggio":<intero 1-10>,"nota":"<osservazione 1-2 frasi>"}';
 
     try {

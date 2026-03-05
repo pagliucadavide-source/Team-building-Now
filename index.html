@@ -1327,11 +1327,13 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
   const [evalError, setEvalError]   = useState(null);
   const [stream, setStream]         = useState(null);
   const [camError, setCamError]     = useState(null);
-  const videoRef    = useRef(null);
-  const recorderRef = useRef(null);
-  const chunksRef   = useRef([]);
-  const timerRef    = useRef(null);
-  const maxSec      = enigma.recordingSeconds || 120;
+  const videoRef      = useRef(null);
+  const recorderRef   = useRef(null);
+  const chunksRef     = useRef([]);
+  const timerRef      = useRef(null);
+  const snapTimerRef  = useRef(null);
+  const snapScoresRef = useRef([]);
+  const maxSec        = enigma.recordingSeconds || 120;
 
   // Open camera immediately on mount
   useEffect(() => {
@@ -1359,6 +1361,7 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
   // Stop stream on unmount
   useEffect(() => {
     return () => {
+      clearInterval(snapTimerRef.current);
       if (stream) stream.getTracks().forEach(t => t.stop());
     };
   }, [stream]);
@@ -1393,7 +1396,7 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
 " +
       "Guarda attentamente l'immagine. Rispondi SOLO con JSON valido senza testo extra:
 " +
-      '{"punteggio":<intero 1-10>,"nota":"<osservazione breve 1-2 frasi: postura, espressione, azione, coinvolgimento>"}';
+      '{"punteggio":<intero 1-10>,"nota":"<osservazione 1-2 frasi>"}';
 
     try {
       const res = await fetch("/api/claude", {
@@ -1771,7 +1774,7 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
             </div>
           ) : null}
           <button className="btn-gold" style={{ ...styles.btnPrimary, width: "100%", padding: "16px", fontSize: "14px" }}
-            onClick={() => onComplete({ ...evaluation, snapshots: snapScoresRef.current })}>
+            onClick={() => onComplete({ ...(evaluation || {}), snapshots: snapScoresRef.current })}>
             CONTINUA →
           </button>
         </div>

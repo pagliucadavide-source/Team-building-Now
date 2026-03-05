@@ -1366,9 +1366,67 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
   const fmtTime = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
   const pct = Math.min(100, Math.round((elapsed / maxSec) * 100));
 
+  // ── Capture frame and send to Claude Vision ─────────────────────────────
+  const captureAndEvalSnapshot = async (snapIndex) => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+    const base64 = canvas.toDataURL("image/jpeg", 0.7).split(",")[1];
+
+    const criteria = enigma.aiEvalCriteria
+      ? "Criteri: " + enigma.aiEvalCriteria
+      : "Valuta coinvolgimento, postura, espressione e approccio al problema.";
+
+    const prompt = "Sei un valutatore esperto di team building e formazione.
+" +
+      "Stai analizzando lo scatto n." + snapIndex + " di una sfida video.
+" +
+      "Giocatore: " + playerName + " — Team: " + gameName + "
+" +
+      "Sfida: " + (enigma.challenge || "Esercizio pratico") + "
+" +
+      criteria + "
+
+" +
+      "Guarda attentamente l'immagine. Rispondi SOLO con JSON valido senza testo extra:
+" +
+      '{"punteggio":<intero 1-10>,"nota":"<osservazione breve 1-2 frasi: postura, espressione, azione, coinvolgimento>"}';
+
+    try {
+      const res = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 200,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+              { type: "text",  text: prompt }
+            ]
+          }]
+        })
+      });
+      const data = await res.json();
+      const raw = data.content && data.content[0] ? data.content[0].text : "";
+      const clean = raw.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+      if (parsed.punteggio) {
+        snapScoresRef.current.push({ snap: snapIndex, punteggio: parsed.punteggio, nota: parsed.nota || "" });
+      }
+    } catch(e) {
+      // silent fail — snapshot is best-effort
+    }
+  };
+
   const startRecording = () => {
     if (!stream) return;
     chunksRef.current = [];
+    snapScoresRef.current = [];
     const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
       ? "video/webm;codecs=vp9" : "video/webm";
     const rec = new MediaRecorder(stream, { mimeType });
@@ -1377,6 +1435,10 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
     recorderRef.current = rec;
     setElapsed(0);
     setPhase("recording");
+    // First snap at 10s, then every 60s
+    let snapIdx = 0;
+    setTimeout(() => { snapIdx++; captureAndEvalSnapshot(snapIdx); }, 10000);
+    snapTimerRef.current = setInterval(() => { snapIdx++; captureAndEvalSnapshot(snapIdx); }, 60000);
     timerRef.current = setInterval(() => {
       setElapsed(prev => {
         const next = prev + 1;
@@ -1388,6 +1450,7 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
 
   const stopRecording = () => {
     clearInterval(timerRef.current);
+    clearInterval(snapTimerRef.current);
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
       recorderRef.current.stop();
     }
@@ -1399,20 +1462,29 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
     const criteria = enigma.aiEvalCriteria
       ? "Criteri specifici di valutazione: " + enigma.aiEvalCriteria + "."
       : "Valuta collaborazione, chiarezza comunicativa, creatività e approccio al problema.";
-    const prompt = `Sei un valutatore esperto di team building e problem solving.
-Il team "${gameName}" (giocatore: ${playerName}) ha appena completato una sfida video.
 
-SFIDA: "${enigma.challenge || "Problem solving di gruppo"}"
+    // Build snapshot summary if available
+    const snaps = snapScoresRef.current;
+    const snapAvg = snaps.length > 0
+      ? Math.round(snaps.reduce((s, x) => s + x.punteggio, 0) / snaps.length * 10) / 10
+      : null;
+    const snapSummary = snaps.length > 0
+      ? "ANALISI VISIVA (scatti ogni 60s):\n" +
+        snaps.map(s => "  Scatto " + s.snap + ": " + s.punteggio + "/10 — " + s.nota).join("\n") +
+        "\n  Media visiva: " + snapAvg + "/10\n\n"
+      : "";
 
-${criteria}
-
-Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
-{
-  "punteggio": <numero intero da 1 a 10>,
-  "obiettivo_raggiunto": <true o false>,
-  "feedback": "<feedback formativo in 3 frasi: punti di forza, area di miglioramento, consiglio pratico. Tono professionale e incoraggiante. In italiano.>",
-  "valutazione_obiettivi": "<valutazione testuale di 3-4 frasi che analizza specificamente se e quanto il team ha rispettato la consegna e raggiunto gli obiettivi della sfida. Dettagliata e concreta. In italiano.>"
-}`;
+    const prompt = "Sei un valutatore esperto di team building e problem solving.\n" +
+      "Il team \"" + gameName + "\" (giocatore: " + playerName + ") ha completato una sfida video.\n\n" +
+      "SFIDA: \"" + (enigma.challenge || "Problem solving di gruppo") + "\"\n\n" +
+      snapSummary +
+      criteria + "\n\n" +
+      "Rispondi SOLO con JSON valido senza testo fuori dal JSON:\n" +
+      '{"punteggio":<intero 1-10>,"obiettivo_raggiunto":<true/false>,' +
+      '"feedback":"<3 frasi: punti forza, area miglioramento, consiglio pratico. Tono professionale. Italiano.>",' +
+      '"valutazione_obiettivi":"<3-4 frasi analisi obiettivi raggiunti. Dettagliata. Italiano.>",' +
+      '"punteggio_visivo":' + (snapAvg !== null ? snapAvg : "null") + ',' +
+      '"dettaglio_scatti":' + (snaps.length > 0 ? JSON.stringify(snaps) : "[]") + '}';
 
     try {
       const res = await fetch("/api/claude", {
@@ -1699,7 +1771,7 @@ Rispondi SOLO con un oggetto JSON valido, senza testo fuori dal JSON:
             </div>
           ) : null}
           <button className="btn-gold" style={{ ...styles.btnPrimary, width: "100%", padding: "16px", fontSize: "14px" }}
-            onClick={() => onComplete(evaluation)}>
+            onClick={() => onComplete({ ...evaluation, snapshots: snapScoresRef.current })}>
             CONTINUA →
           </button>
         </div>
@@ -2503,9 +2575,24 @@ Inferisci i voti dai dati. Non inventare.`;
       const videoXml = videoScores.length > 0
         ? heading("SFIDE VIDEO — FEEDBACK AI") + videoScores.map(vs => {
             const vColor = vs.videoObiettivoRaggiunto ? "2ECC71" : "E74C3C";
-            return para(`${vs.title}  —  Punteggio: ${vs.score}/10  |  Obiettivo: ${vs.videoObiettivoRaggiunto ? "Raggiunto" : "Non raggiunto"}`,
+            const snapshots = vs.videoSnapshots || [];
+            const snapAvg = snapshots.length > 0
+              ? (snapshots.reduce((s, x) => s + x.punteggio, 0) / snapshots.length).toFixed(1)
+              : null;
+            const snapDetail = snapshots.length > 0
+              ? heading("Analisi visiva automatica (scatti ogni 60s)") +
+                snapshots.map((s, i) =>
+                  para("Scatto " + (i+1) + "  —  " + s.punteggio + "/10:  " + s.nota,
+                    { size:19, color:"AAAAAA", italic:true })
+                ).join("") +
+                para("Media punteggio visivo: " + snapAvg + "/10",
+                  { bold:true, size:20, color:"C9A84C" }) + emptyPara()
+              : "";
+            return para(vs.title + "  —  Punteggio: " + vs.score + "/10  |  Obiettivo: " + (vs.videoObiettivoRaggiunto ? "Raggiunto" : "Non raggiunto"),
               { bold:true, size:22, color:vColor }) +
-              para(vs.videoFeedback, { italic:true, size:20, color:"AAAAAA" }) + emptyPara();
+              para(vs.videoFeedback, { italic:true, size:20, color:"AAAAAA" }) +
+              (vs.videoPunteggioVisivo ? para("Punteggio visivo medio (AI Vision): " + vs.videoPunteggioVisivo + "/10", { size:20, color:"C9A84C" }) : "") +
+              snapDetail + emptyPara();
           }).join("") : "";
 
       // ── assemble document.xml ─────────────────────────────────────────
@@ -5873,6 +5960,8 @@ function PlayerGameView({ game, onBack }) {
                     videoFeedback: evalResult?.feedback || "",
                     videoValutazioneObiettivi: evalResult?.valutazione_obiettivi || "",
                     videoObiettivoRaggiunto: evalResult?.obiettivo_raggiunto ?? true,
+                    videoPunteggioVisivo: evalResult?.punteggio_visivo ?? null,
+                    videoSnapshots: evalResult?.snapshots || evalResult?.dettaglio_scatti || [],
                   };
                   const newScores = [...scores, entry];
                   setScores(newScores);

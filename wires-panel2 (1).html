@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"/>
+<title>NEXUS — Pannello Simboli</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none;touch-action:none;}
+html,body{height:100%;overflow-x:hidden;}
+body{
+  background:linear-gradient(180deg,#110704 0%,#1a0a04 60%,#0e0502 100%);
+  font-family:'Share Tech Mono',monospace;
+  min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;
+  padding:8px 6px 30px;
+}
+
+/* ── HEADER ── */
+.hdr{
+  width:100%;max-width:540px;margin-bottom:7px;
+  background:linear-gradient(180deg,#1c0d07,#110804);
+  border:1px solid #3d1c0e;border-top:3px solid #b03020;
+  border-radius:5px;padding:10px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 6px 24px rgba(0,0,0,0.7);
+}
+.hdr-title{font-family:'Bebas Neue';font-size:22px;letter-spacing:4px;color:#c0392b;text-shadow:0 0 14px rgba(192,57,43,0.5);}
+.hdr-sub{font-size:8px;color:#6a3a28;letter-spacing:2px;margin-top:2px;}
+.hdr-badge{font-size:9px;padding:4px 10px;border-radius:2px;letter-spacing:1px;
+  color:#c0392b;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);}
+
+/* ── CLUE PANEL ── */
+.clue-panel{
+  width:100%;max-width:540px;margin-bottom:7px;
+  background:linear-gradient(180deg,#1a1206,#120e04);
+  border:1px solid rgba(220,160,60,0.35);border-left:3px solid rgba(220,160,60,0.7);
+  border-radius:4px;padding:12px 14px;
+  box-shadow:0 2px 12px rgba(0,0,0,0.5);
+}
+.clue-title{font-size:9px;color:rgba(220,160,60,0.75);letter-spacing:3px;margin-bottom:10px;}
+.clues-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.clue{
+  background:rgba(255,200,80,0.05);
+  border:1px solid rgba(220,160,60,0.2);
+  border-radius:4px;padding:10px 12px;
+  font-size:12px;color:rgba(220,190,130,0.75);letter-spacing:0.3px;line-height:1.75;
+  cursor:pointer;transition:all .2s;
+}
+.clue:hover{background:rgba(255,200,80,0.09);border-color:rgba(220,160,60,0.4);color:rgba(240,210,150,0.9);}
+.clue.open{background:rgba(255,200,80,0.08);border-color:rgba(220,160,60,0.5);color:#e8d090;}
+.clue-id{font-size:8px;color:rgba(220,160,60,0.55);letter-spacing:2px;margin-bottom:5px;}
+.clue-lock{font-size:20px;opacity:.4;text-align:center;padding:4px 0;}
+.clue-text{display:none;line-height:1.75;font-size:12px;}
+.clue.open .clue-lock{display:none;}
+.clue.open .clue-text{display:block;}
+.clue em{font-style:normal;color:#ffd166;font-weight:700;}
+
+/* ── PANEL WRAP ── */
+.panel-wrap{
+  width:100%;max-width:540px;
+  position:relative;
+  touch-action:none;
+}
+#svg-layer{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:15;overflow:visible;
+}
+
+/* ── RUSTY PANEL ── */
+.panel{
+  width:100%;
+  padding:16px 20px;
+  border-radius:7px;
+  position:relative;
+  overflow:visible;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%238b2e1a'/%3E%3Crect x='0' y='0' width='2' height='2' fill='%23903218' opacity='0.4'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 25% 25%, #a03a20 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 75%, #6a1e0e 0%, transparent 50%),
+    linear-gradient(145deg,#9a3218,#7a2410,#8e2e1a,#6e200c);
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.8),
+    inset 0 1px 0 rgba(255,140,60,0.08),
+    inset 0 -2px 8px rgba(0,0,0,0.4);
+  border:2px solid #3a1408;
+  border-top:2px solid rgba(255,120,60,0.12);
+}
+/* rust texture overlay */
+.panel::after{
+  content:'';position:absolute;inset:0;pointer-events:none;border-radius:7px;
+  background:
+    radial-gradient(ellipse 80px 50px at 10% 85%, rgba(10,4,2,0.55) 0%,transparent 100%),
+    radial-gradient(ellipse 120px 30px at 85% 92%, rgba(8,3,1,0.45) 0%,transparent 100%),
+    radial-gradient(circle 15px at 22% 12%, rgba(0,0,0,0.35) 0%,transparent 100%),
+    radial-gradient(circle 8px at 68% 45%, rgba(0,0,0,0.25) 0%,transparent 100%),
+    radial-gradient(ellipse 60px 40px at 95% 15%, rgba(170,100,50,0.1) 0%,transparent 100%);
+  z-index:1;
+}
+
+/* ── GRID ── */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+  position:relative;z-index:2;
+}
+
+/* ── CELL ── */
+.cell{
+  aspect-ratio:1;
+  position:relative;
+  background:
+    linear-gradient(135deg,rgba(255,120,50,0.05) 0%,transparent 60%),
+    linear-gradient(180deg,#6e1e0c 0%,#4e1408 100%);
+  border:1px solid #2e0e06;
+  border-top:1px solid rgba(255,100,40,0.1);
+  border-radius:3px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:inset 0 2px 5px rgba(0,0,0,0.6),0 1px 0 rgba(255,80,20,0.06);
+  overflow:visible;
+}
+/* corner rivets */
+.cell::before,.cell::after{
+  content:'';position:absolute;
+  width:6px;height:6px;border-radius:50%;
+  background:radial-gradient(circle at 38% 32%,#4a2818,#180808);
+  border:1px solid rgba(0,0,0,0.6);
+  box-shadow:inset 0 1px 0 rgba(255,80,20,0.08);
+}
+.cell::before{top:4px;left:4px;}
+.cell::after {top:4px;right:4px;}
+.cell .rv-bl{position:absolute;bottom:4px;left:4px;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#4a2818,#180808);border:1px solid rgba(0,0,0,0.6);}
+.cell .rv-br{position:absolute;bottom:4px;right:4px;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#4a2818,#180808);border:1px solid rgba(0,0,0,0.6);}
+
+/* ── SYMBOL ── */
+.sym{
+  font-size:clamp(14px,3.5vw,22px);
+  line-height:1;
+  color:rgba(15,5,2,0.9);
+  text-shadow:0 1px 0 rgba(255,90,30,0.08);
+  pointer-events:none;
+  font-family:'Bebas Neue',sans-serif;
+}
+
+/* ── NODE (bolt connector) ── */
+.node{
+  position:absolute;
+  width:clamp(20px,5.5vw,28px);
+  height:clamp(20px,5.5vw,28px);
+  border-radius:50%;
+  background:radial-gradient(circle at 38% 32%,#3a4c60,#0d1e2c,#060e18);
+  border:2px solid rgba(255,255,255,0.1);
+  border-top:2px solid rgba(255,255,255,0.2);
+  box-shadow:0 3px 10px rgba(0,0,0,0.85),inset 0 1px 0 rgba(255,255,255,0.05),inset 0 -1px 0 rgba(0,0,0,0.3);
+  cursor:crosshair;
+  z-index:20;
+  transition:border-color .2s,box-shadow .2s,transform .15s;
+  display:flex;align-items:center;justify-content:center;
+}
+.node::after{content:'';width:35%;height:35%;border-radius:50%;background:rgba(255,255,255,0.1);}
+.node.left  {left:-14px; top:50%;transform:translateY(-50%);}
+.node.right {right:-14px;top:50%;transform:translateY(-50%);}
+.node:hover:not(.used){
+  border-color:rgba(255,200,80,0.6);
+  box-shadow:0 3px 10px rgba(0,0,0,0.85),0 0 12px rgba(255,190,60,0.3),inset 0 1px 0 rgba(255,255,255,0.08);
+  transform:translateY(-50%) scale(1.15);
+}
+.node.dragging{
+  border-color:rgba(255,200,80,0.9);
+  box-shadow:0 0 0 3px rgba(255,190,60,0.25),0 3px 10px rgba(0,0,0,0.85);
+  animation:ndr .5s ease-in-out infinite;
+}
+@keyframes ndr{0%,100%{box-shadow:0 0 0 3px rgba(255,190,60,0.25),0 3px 10px rgba(0,0,0,0.85)}50%{box-shadow:0 0 0 5px rgba(255,190,60,0.12),0 3px 10px rgba(0,0,0,0.85)}}
+.node.used{cursor:default;}
+.node.used:hover{transform:translateY(-50%) scale(1);}
+
+/* connected glows */
+.node.c-blue  {background:radial-gradient(circle,#1a4a68,#0a2038);border-color:#29b6f6 !important;box-shadow:0 0 12px rgba(41,182,246,0.55) !important;}
+.node.c-green {background:radial-gradient(circle,#0a3820,#041808);border-color:#2ec97e !important;box-shadow:0 0 12px rgba(46,201,126,0.55) !important;}
+.node.c-yellow{background:radial-gradient(circle,#3a2e04,#1a1602);border-color:#f7c948 !important;box-shadow:0 0 12px rgba(247,201,72,0.55) !important;}
+.node.c-purple{background:radial-gradient(circle,#2c0c50,#120424);border-color:#9b5de5 !important;box-shadow:0 0 12px rgba(155,93,229,0.55) !important;}
+.node.c-orange{background:radial-gradient(circle,#3a1c04,#1a0c02);border-color:#ff8c42 !important;box-shadow:0 0 12px rgba(255,140,66,0.55) !important;}
+
+/* ── PROGRESS ── */
+.prog-wrap{
+  width:100%;max-width:540px;margin-top:7px;
+  background:rgba(0,0,0,0.3);border:1px solid rgba(192,57,43,0.15);
+  border-radius:4px;padding:8px 14px;
+  display:flex;align-items:center;gap:12px;
+}
+.prog-lbl{font-size:8px;color:#6a3a28;letter-spacing:2px;white-space:nowrap;}
+.prog-track{flex:1;height:4px;background:#140604;border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,#c0392b,#e67e22);border-radius:2px;transition:width .5s;box-shadow:0 0 6px rgba(192,57,43,0.5);}
+.prog-count{font-family:'Bebas Neue';font-size:12px;color:#c0392b;letter-spacing:2px;white-space:nowrap;}
+
+/* ── OVERLAYS ── */
+.ov{position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .7s;padding:20px;
+  background:radial-gradient(ellipse at 50% 40%,rgba(10,4,2,0.97),rgba(4,1,0,.99));}
+.ov.show{opacity:1;pointer-events:all;}
+.ov-icon{font-size:52px;margin-bottom:10px;}
+.ov h1{font-family:'Bebas Neue';font-size:clamp(32px,8vw,60px);letter-spacing:5px;text-align:center;margin-bottom:8px;}
+#ov-win h1{color:#2ec97e;text-shadow:0 0 28px rgba(46,201,126,0.6);}
+#ov-fail h1{color:#c0392b;text-shadow:0 0 28px rgba(192,57,43,0.6);}
+.ov-sub{font-size:11px;color:rgba(180,140,100,0.5);text-align:center;line-height:1.8;}
+.ov-code{font-family:'Bebas Neue';font-size:clamp(20px,5vw,38px);letter-spacing:12px;margin:14px 0 16px;text-align:center;}
+.ov-note{font-size:9px;color:rgba(180,140,100,0.28);letter-spacing:1px;text-align:center;}
+.ov-btn{margin-top:18px;background:transparent;border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.35);
+  font-family:'Share Tech Mono';font-size:10px;letter-spacing:2px;padding:10px 26px;cursor:pointer;border-radius:3px;transition:all .2s;}
+.ov-btn:hover{border-color:rgba(255,255,255,0.4);color:#fff;}
+
+/* ── SPARKS ── */
+.spark{position:fixed;border-radius:50%;pointer-events:none;z-index:600;animation:spk 1s ease forwards;}
+@keyframes spk{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(0)}}
+@keyframes scfl{0%{opacity:.5}100%{opacity:0}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <div class="hdr-title">PANNELLO CIRCUITI</div>
+    <div class="hdr-sub">NEXUS // UNITÀ DI CONTROLLO B-7 // COLLEGAMENTO RICHIESTO</div>
+  </div>
+  <div class="hdr-badge" id="badge">BLOCCAT0</div>
+</div>
+
+<!-- CLUES -->
+<div class="clue-panel">
+  <div class="clue-title">▸ REGISTRO DIAGNOSTICO — TAP PER DECRITTARE</div>
+  <div class="clues-grid" id="clues-grid"></div>
+</div>
+
+<!-- PANEL -->
+<div class="panel-wrap" id="pwrap">
+  <svg id="svg-layer"></svg>
+  <div class="panel">
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="prog-wrap">
+  <div class="prog-lbl">CIRCUITI</div>
+  <div class="prog-track"><div class="prog-fill" id="pfill" style="width:0%"></div></div>
+  <div class="prog-count" id="pcount">0 / 5</div>
+</div>
+
+<!-- OVERLAYS -->
+<div class="ov" id="ov-win">
+  <div class="ov-icon">⚡</div><h1>CIRCUITO CHIUSO</h1>
+  <div class="ov-sub" id="win-score-label" style="font-size:14px;margin-bottom:2px;color:#e8d090;"></div>
+  <div class="ov-sub">Tutti i collegamenti sono corretti.<br>Il pannello è ora attivo.</div>
+  <div class="ov-code" id="win-code"></div>
+  <div class="ov-note">inserisci questo codice nella webapp per i punti</div>
+  <button class="ov-btn" onclick="restart()">↺ RIPROVA</button>
+</div>
+<div class="ov" id="ov-fail">
+  <div class="ov-icon">💥</div><h1>CORTOCIRCUITO</h1>
+  <div class="ov-sub">Troppi collegamenti errati. Il pannello è danneggiato.</div>
+  <div class="ov-code" style="color:#e67e22" id="fail-code"></div>
+  <div class="ov-note">inserisci questo codice per continuare</div>
+  <button class="ov-btn" onclick="restart()">↺ RIPROVA</button>
+</div>
+
+<script>
+// ════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════
+const SCORES_BY_ERRORS = { 0: 10, 1: 7, 2: 4 }; // punti in base agli errori
+const CODES = {
+  0: 'NEXUS-PC33-PERFECT',
+  1: 'NEXUS-PC33-GOOD',
+  2: 'NEXUS-PC33-OK',
+};
+const CODE_FAIL = 'FAIL-PC33';
+const MAX_WRONG = 3;
+
+// ════════════════════════════════════
+//  URL PARAMS (iniettati dalla webapp)
+// ════════════════════════════════════
+const URL_PARAMS  = new URLSearchParams(window.location.search);
+const GAME_ID     = URL_PARAMS.get('gameId');
+const PLAYER_CODE = URL_PARAMS.get('playerCode');
+const ENIGMA_IDX  = parseInt(URL_PARAMS.get('enigmaIdx') || '0', 10);
+const STORE_URL   = 'https://team-building-now.vercel.app/api/store';
+
+async function saveScore(score, elapsed) {
+  if (!GAME_ID || !PLAYER_CODE) return; // non siamo dentro la webapp
+  try {
+    const key = `scores:${GAME_ID}:${PLAYER_CODE}`;
+    // Leggi punteggio esistente
+    const res  = await fetch(`${STORE_URL}?key=${encodeURIComponent(key)}`);
+    const data = await res.json();
+    let existing = null;
+    try { existing = JSON.parse(data.value); } catch {}
+
+    // Aggiorna entry per questo enigma
+    const scores = existing?.scores || [];
+    const entry = { idx: ENIGMA_IDX, title: 'Pannello Circuiti B-7', score, elapsed, expired: false };
+    const idx = scores.findIndex(s => s.idx === ENIGMA_IDX);
+    if (idx >= 0) scores[idx] = entry; else scores.push(entry);
+
+    const updated = {
+      ...(existing || {}),
+      playerCode: PLAYER_CODE,
+      gameId: GAME_ID,
+      scores,
+      total: scores.reduce((t, s) => t + (s.score || 0), 0),
+      updatedAt: new Date().toISOString(),
+    };
+    await fetch(STORE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value: JSON.stringify(updated) }),
+    });
+  } catch(e) { console.warn('saveScore failed', e); }
+}
+
+/*
+  GRID: 5 rows × 4 cols
+  LEFT nodes  = col 0 (right edge of cell)  — actually we put them on LEFT side, outside panel
+  RIGHT nodes = col 3 (left edge of cell)   — put on RIGHT side, outside panel
+
+  5 wires, each with a logical clue connecting left symbol to right symbol.
+
+  PUZZLE LOGIC (clues):
+  1. BLUE   — "Il simbolo che precede nel tempo connette ciò che segue nel tempo"
+              LEFT: ▷ (freccia avanti = futuro)  RIGHT: θ (orologio/ciclo = tempo)
+  2. GREEN  — "Ciò che sale deve trovare ciò che scende"
+              LEFT: ↑  RIGHT: ↓
+  3. YELLOW — "Il vuoto cerca la sua forma"
+              LEFT: ○ (cerchio vuoto)  RIGHT: ● (cerchio pieno) — use □ and ■
+              Actually use ◇ (vuoto) → ◆ (pieno)
+  4. PURPLE — "Il positivo attrae il negativo"
+              LEFT: ＋  RIGHT: －
+  5. ORANGE — "La freccia punta al suo riflesso speculare"
+              LEFT: ◁  RIGHT: ▷
+
+  CLUE TEXTS:
+  C1: "il vettore del <em>moto</em> si connette al simbolo del <em>ciclo</em>"
+  C2: "ciò che <em>sale</em> cerca sempre ciò che <em>scende</em>"
+  C3: "il <em>vuoto</em> trova compimento nella sua <em>forma piena</em>"
+  C4: "il polo <em>positivo</em> è attratto dal suo <em>opposto</em>"
+  C5: "ogni freccia è riflessa da <em>uno specchio invisibile</em>"
+
+  Left nodes (col 0): rows 0-4 — symbols: ▷ ↑ ◇ ＋ ◁
+  Right nodes (col 3): shuffled rows — symbols: θ ↓ ◆ － ▷
+  Right rows: [2, 4, 0, 1, 3]  (shuffled)
+
+  Inner cells (cols 1,2): decorative symbols
+*/
+
+const WIRES = [
+  {id:'w0',color:'#29b6f6',cn:'c-blue',  lSym:'▷', rSym:'θ', lRow:0, rRow:2,
+   clueId:'LOG-Ω1', clueIcon:'⏩',
+   clueText:'il vettore del <em>moto</em> si connette<br>al simbolo del <em>ciclo continuo</em>'},
+  {id:'w1',color:'#2ec97e',cn:'c-green', lSym:'↑', rSym:'↓', lRow:1, rRow:4,
+   clueId:'LOG-Ω2', clueIcon:'↕️',
+   clueText:'ciò che <em>sale</em> cerca sempre<br>ciò che <em>scende</em>'},
+  {id:'w2',color:'#f7c948',cn:'c-yellow',lSym:'◇', rSym:'◆', lRow:2, rRow:0,
+   clueId:'LOG-Ω3', clueIcon:'🔷',
+   clueText:'il <em>vuoto</em> trova compimento<br>nella sua <em>forma piena</em>'},
+  {id:'w3',color:'#9b5de5',cn:'c-purple',lSym:'＋', rSym:'－', lRow:3, rRow:1,
+   clueId:'LOG-Ω4', clueIcon:'⚡',
+   clueText:'il polo <em>positivo</em> è attratto<br>dal suo <em>opposto</em>'},
+  {id:'w4',color:'#ff8c42',cn:'c-orange',lSym:'◁', rSym:'▷', lRow:4, rRow:3,
+   clueId:'LOG-Ω5', clueIcon:'🪞',
+   clueText:'ogni freccia è riflessa<br>da <em>uno specchio invisibile</em>'},
+];
+
+const ROWS=5, COLS=4;
+const DECO=['—','±','∞','÷','≈','Σ','Δ','Λ','Ψ','Φ','Ξ','Π'];
+function dSym(){return DECO[Math.floor(Math.random()*DECO.length)];}
+
+// State
+let dragging=null;  // {wireId, fromId, fromEl, startX, startY}
+let connections={}; // wireId → {from,to}
+let wrongCount=0;
+let nodeEls={};     // nodeId → DOM el
+let gameOver=false;
+
+// ════════════════════════════════════
+//  BUILD CLUES
+// ════════════════════════════════════
+function buildClues(){
+  const grid=document.getElementById('clues-grid');
+  grid.innerHTML='';
+  WIRES.forEach((w,i)=>{
+    const card=document.createElement('div');
+    card.className='clue'; card.id='clue-'+i;
+    card.innerHTML=`<div class="clue-id">${w.clueId}</div><div class="clue-lock">${w.clueIcon}</div><div class="clue-text">${w.clueText}</div>`;
+    card.onclick=()=>card.classList.toggle('open');
+    grid.appendChild(card);
+  });
+}
+
+// ════════════════════════════════════
+//  BUILD GRID
+// ════════════════════════════════════
+function buildGrid(){
+  const g=document.getElementById('grid');
+  g.style.gridTemplateRows=`repeat(${ROWS},1fr)`;
+  g.innerHTML='';
+
+  const lMap={}, rMap={};
+  WIRES.forEach(w=>{lMap[w.lRow]=w; rMap[w.rRow]=w;});
+
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const cell=document.createElement('div');
+      cell.className='cell';
+      cell.id=`c${r}${c}`;
+      // rivets
+      ['rv-bl','rv-br'].forEach(cls=>{const d=document.createElement('div');d.className=cls;cell.appendChild(d);});
+
+      // symbol
+      const sym=document.createElement('div');
+      sym.className='sym';
+      if(c===0 && lMap[r])      sym.textContent=lMap[r].lSym;
+      else if(c===3 && rMap[r]) sym.textContent=rMap[r].rSym;
+      else sym.textContent=dSym();
+      cell.appendChild(sym);
+
+      // nodes
+      if(c===0 && lMap[r]){
+        const nid='L'+lMap[r].id;
+        const node=makeNode(nid,'left',lMap[r].color);
+        cell.appendChild(node);
+        nodeEls[nid]=node;
+      }
+      if(c===3 && rMap[r]){
+        const nid='R'+rMap[r].id;
+        const node=makeNode(nid,'right',rMap[r].color);
+        cell.appendChild(node);
+        nodeEls[nid]=node;
+      }
+
+      g.appendChild(cell);
+    }
+  }
+}
+
+function makeNode(id,side,color){
+  const n=document.createElement('div');
+  n.className='node '+side;
+  n.id='node-'+id;
+  n.dataset.nid=id;
+  return n;
+}
+
+// ════════════════════════════════════
+//  DRAG & DROP
+// ════════════════════════════════════
+const wrap=()=>document.getElementById('pwrap');
+
+function getCenter(el){
+  const wr=wrap().getBoundingClientRect();
+  const er=el.getBoundingClientRect();
+  return {x:er.left-wr.left+er.width/2, y:er.top-wr.top+er.height/2};
+}
+
+function findWireFromNode(nid){
+  // nid = 'Lw0' or 'Rw0'
+  const wid=nid.slice(1); // 'w0'
+  return WIRES.find(w=>w.id===wid);
+}
+
+function nodeUsed(nid){
+  const wid=nid.slice(1);
+  return !!connections[wid];
+}
+
+// Pointer down on a node → start drag
+function onPointerDown(e){
+  if(gameOver)return;
+  const target=e.target.closest('.node');
+  if(!target)return;
+  const nid=target.dataset.nid;
+  if(!nid||nodeUsed(nid))return;
+  if(nid[0]!=='L')return; // only drag from LEFT nodes
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const wire=findWireFromNode(nid);
+  const from=getCenter(target);
+
+  target.classList.add('dragging');
+  dragging={wireId:wire.id,fromId:nid,fromEl:target,color:wire.color,x:from.x,y:from.y};
+
+  updateDragLine(from.x,from.y,from.x,from.y,wire.color);
+}
+
+function onPointerMove(e){
+  if(!dragging)return;
+  e.preventDefault();
+  const wr=wrap().getBoundingClientRect();
+  const cx=(e.touches?e.touches[0].clientX:e.clientX)-wr.left;
+  const cy=(e.touches?e.touches[0].clientY:e.clientY)-wr.top;
+  updateDragLine(dragging.x,dragging.y,cx,cy,dragging.color);
+
+  // Highlight hovered right node
+  const els=document.querySelectorAll('.node.right:not(.used)');
+  els.forEach(el=>{
+    const c=getCenter(el);
+    const dist=Math.sqrt((c.x-cx)**2+(c.y-cy)**2);
+    el.style.borderColor=dist<22?'rgba(255,220,80,0.7)':'';
+    el.style.boxShadow=dist<22?'0 0 14px rgba(255,200,60,0.4),0 3px 10px rgba(0,0,0,0.85)':'';
+  });
+}
+
+function onPointerUp(e){
+  if(!dragging)return;
+  e.preventDefault();
+  const wr=wrap().getBoundingClientRect();
+  const cx=(e.changedTouches?e.changedTouches[0].clientX:e.clientX)-wr.left;
+  const cy=(e.changedTouches?e.changedTouches[0].clientY:e.clientY)-wr.top;
+
+  // Find closest right node
+  let closest=null, minDist=32;
+  document.querySelectorAll('.node.right:not(.used)').forEach(el=>{
+    const c=getCenter(el);
+    const d=Math.sqrt((c.x-cx)**2+(c.y-cy)**2);
+    if(d<minDist){minDist=d;closest=el;}
+  });
+
+  dragging.fromEl.classList.remove('dragging');
+  removeDragLine();
+
+  // Reset hover highlights
+  document.querySelectorAll('.node.right').forEach(el=>{el.style.borderColor='';el.style.boxShadow='';});
+
+  if(!closest){
+    dragging=null; return;
+  }
+
+  const toNid=closest.dataset.nid;
+  const toWireId=toNid.slice(1);
+
+  if(toWireId===dragging.wireId){
+    // CORRECT!
+    makeConnection(dragging.fromId,toNid,dragging.wireId,dragging.color);
+  } else {
+    // WRONG
+    wrongCount++;
+    flashWrong();
+    if(wrongCount>=MAX_WRONG) setTimeout(doFail,500);
+  }
+
+  dragging=null;
+}
+
+// ════════════════════════════════════
+//  SVG LINES
+// ════════════════════════════════════
+function updateDragLine(x1,y1,x2,y2,color){
+  const svg=document.getElementById('svg-layer');
+  let path=document.getElementById('drag-line');
+  let hilite=document.getElementById('drag-hilite');
+
+  const cp1x=x1-50, cp1y=y1+30, cp2x=x2+50, cp2y=y2+30;
+  const d=`M${x1},${y1} C${cp1x},${cp1y} ${cp2x},${cp2y} ${x2},${y2}`;
+
+  if(!path){
+    path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.id='drag-line';path.setAttribute('fill','none');
+    path.setAttribute('stroke-linecap','round');path.setAttribute('stroke-width','8');
+    svg.appendChild(path);
+    hilite=document.createElementNS('http://www.w3.org/2000/svg','path');
+    hilite.id='drag-hilite';hilite.setAttribute('fill','none');
+    hilite.setAttribute('stroke-linecap','round');hilite.setAttribute('stroke-width','3');
+    hilite.setAttribute('stroke','rgba(255,255,255,0.2)');
+    svg.appendChild(hilite);
+  }
+  path.setAttribute('d',d);
+  path.setAttribute('stroke',color);
+  path.setAttribute('opacity','0.85');
+  hilite.setAttribute('d',d);
+}
+
+function removeDragLine(){
+  const svg=document.getElementById('svg-layer');
+  ['drag-line','drag-hilite'].forEach(id=>{const e=document.getElementById(id);if(e)svg.removeChild(e);});
+}
+
+function drawCable(fromId,toId,color,wireId){
+  const svg=document.getElementById('svg-layer');
+  const f=getCenter(nodeEls[fromId]);
+  const t=getCenter(nodeEls[toId]);
+
+  // Nice drooping arc — left goes OUT left, right goes OUT right
+  const sag=Math.max(40,(Math.abs(t.y-f.y)*0.5)+30);
+  const d=`M${f.x},${f.y} C${f.x-55},${f.y+sag} ${t.x+55},${t.y+sag} ${t.x},${t.y}`;
+
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.id='cable-'+wireId;
+  path.setAttribute('d',d);path.setAttribute('fill','none');
+  path.setAttribute('stroke',color);path.setAttribute('stroke-width','9');
+  path.setAttribute('stroke-linecap','round');path.setAttribute('opacity','0.9');
+
+  const hi=document.createElementNS('http://www.w3.org/2000/svg','path');
+  hi.setAttribute('d',d);hi.setAttribute('fill','none');
+  hi.setAttribute('stroke','rgba(255,255,255,0.22)');hi.setAttribute('stroke-width','3.5');
+  hi.setAttribute('stroke-linecap','round');
+
+  // Shadow path
+  const sh=document.createElementNS('http://www.w3.org/2000/svg','path');
+  sh.setAttribute('d',d);sh.setAttribute('fill','none');
+  sh.setAttribute('stroke','rgba(0,0,0,0.4)');sh.setAttribute('stroke-width','12');
+  sh.setAttribute('stroke-linecap','round');
+
+  svg.insertBefore(sh,svg.firstChild);
+  svg.appendChild(path);
+  svg.appendChild(hi);
+
+  // Animate draw
+  const len=path.getTotalLength();
+  [path,hi,sh].forEach(p=>{
+    p.style.strokeDasharray=len;p.style.strokeDashoffset=len;
+    p.style.transition='stroke-dashoffset 0.45s ease';
+  });
+  requestAnimationFrame(()=>{
+    path.style.strokeDashoffset='0';
+    hi.style.strokeDashoffset='0';
+    sh.style.strokeDashoffset='0';
+  });
+}
+
+// ════════════════════════════════════
+//  CONNECTION LOGIC
+// ════════════════════════════════════
+function makeConnection(fromId,toId,wireId,color){
+  connections[wireId]={from:fromId,to:toId};
+  const wire=WIRES.find(w=>w.id===wireId);
+  const cn=wire.cn;
+
+  nodeEls[fromId].classList.remove('dragging');
+  nodeEls[fromId].classList.add('used',cn);
+  nodeEls[toId].classList.add('used',cn);
+
+  drawCable(fromId,toId,color,wireId);
+  spawnSparks(nodeEls[fromId],color);
+  spawnSparks(nodeEls[toId],color);
+
+  const count=Object.keys(connections).length;
+  document.getElementById('pfill').style.width=(count/WIRES.length*100)+'%';
+  document.getElementById('pcount').textContent=count+' / '+WIRES.length;
+
+  if(count===WIRES.length) setTimeout(doWin,700);
+}
+
+// ════════════════════════════════════
+//  FX
+// ════════════════════════════════════
+function flashWrong(){
+  const f=document.createElement('div');
+  f.style.cssText='position:fixed;inset:0;background:#c0392b;pointer-events:none;z-index:400;opacity:.35;transition:opacity .32s;';
+  document.body.appendChild(f);
+  requestAnimationFrame(()=>{f.style.opacity='0';setTimeout(()=>f.remove(),350);});
+}
+
+function spawnSparks(el,color){
+  const r=el.getBoundingClientRect();
+  const cx=r.left+r.width/2, cy=r.top+r.height/2;
+  for(let i=0;i<12;i++){
+    const s=document.createElement('div');s.className='spark';
+    const a=Math.PI*2*i/12, d=18+Math.random()*40, sz=1.5+Math.random()*3.5;
+    s.style.cssText=`left:${cx}px;top:${cy}px;width:${sz}px;height:${sz}px;background:${color};--dx:${Math.cos(a)*d}px;--dy:${Math.sin(a)*d}px;position:fixed;border-radius:50%;pointer-events:none;z-index:600;animation:spk .9s ease forwards;`;
+    document.body.appendChild(s);setTimeout(()=>s.remove(),950);
+  }
+}
+
+// ════════════════════════════════════
+//  END
+// ════════════════════════════════════
+function doWin(){
+  gameOver=true;
+  const code   = CODES[wrongCount] || CODES[2];
+  const pts    = SCORES_BY_ERRORS[wrongCount] ?? 4;
+  const labels = {0:'⭐⭐⭐ PERFETTO — 0 errori', 1:'⭐⭐ BUONO — 1 errore', 2:'⭐ SUFFICIENTE — 2 errori'};
+  const colors = {0:'#2ec97e', 1:'#f7c948', 2:'#ff8c42'};
+  document.getElementById('win-code').textContent = GAME_ID ? `✓ Punteggio salvato: ${pts}/10` : code;
+  document.getElementById('win-code').style.color = colors[wrongCount] || colors[2];
+  document.getElementById('win-score-label').textContent = labels[wrongCount] || labels[2];
+  document.getElementById('badge').textContent='ATTIVO';
+  document.getElementById('badge').style.color='#2ec97e';
+  document.getElementById('badge').style.borderColor='rgba(46,201,126,0.3)';
+  const elapsed = Math.round((Date.now() - (window._startTime||Date.now())) / 1000);
+  saveScore(pts, elapsed);
+  setTimeout(()=>document.getElementById('ov-win').classList.add('show'),300);
+}
+function doFail(){
+  gameOver=true;
+  document.getElementById('fail-code').textContent = GAME_ID ? '✗ Punteggio: 0/10' : CODE_FAIL;
+  const elapsed = Math.round((Date.now() - (window._startTime||Date.now())) / 1000);
+  saveScore(0, elapsed);
+  setTimeout(()=>document.getElementById('ov-fail').classList.add('show'),300);
+}
+
+// ════════════════════════════════════
+//  RESTART
+// ════════════════════════════════════
+function restart(){
+  gameOver=false; dragging=null; connections={}; wrongCount=0; nodeEls={};
+  ['ov-win','ov-fail'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  document.getElementById('svg-layer').innerHTML='';
+  document.getElementById('pfill').style.width='0%';
+  document.getElementById('pcount').textContent='0 / '+WIRES.length;
+  document.getElementById('badge').textContent='BLOCCAT0';
+  document.getElementById('badge').style.color='';
+  document.getElementById('badge').style.borderColor='';
+  buildGrid();
+  attachEvents();
+}
+
+// ════════════════════════════════════
+//  EVENTS
+// ════════════════════════════════════
+function attachEvents(){
+  const pw=document.getElementById('pwrap');
+  // Remove old
+  pw.onpointerdown=null; pw.onpointermove=null; pw.onpointerup=null;
+  pw.ontouchstart=null; pw.ontouchmove=null; pw.ontouchend=null;
+
+  pw.addEventListener('pointerdown', onPointerDown, {passive:false});
+  pw.addEventListener('pointermove', onPointerMove, {passive:false});
+  pw.addEventListener('pointerup',   onPointerUp,   {passive:false});
+  pw.addEventListener('touchstart',  onPointerDown, {passive:false});
+  pw.addEventListener('touchmove',   onPointerMove, {passive:false});
+  pw.addEventListener('touchend',    onPointerUp,   {passive:false});
+}
+
+// Redraw cables on resize
+window.addEventListener('resize',()=>{
+  const svg=document.getElementById('svg-layer');
+  // remove all except drag elements
+  Array.from(svg.children).forEach(el=>{
+    if(el.id!=='drag-line'&&el.id!=='drag-hilite') svg.removeChild(el);
+  });
+  Object.entries(connections).forEach(([wid,conn])=>{
+    const w=WIRES.find(x=>x.id===wid);
+    drawCable(conn.from,conn.to,w.color,wid);
+  });
+});
+
+window.addEventListener('load',()=>{
+  window._startTime = Date.now();
+  buildClues();
+  buildGrid();
+  attachEvents();
+});
+</script>
+</body>
+</html>

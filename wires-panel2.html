@@ -211,7 +211,43 @@ body{
   font-family:'Share Tech Mono';font-size:10px;letter-spacing:2px;padding:10px 26px;cursor:pointer;border-radius:3px;transition:all .2s;}
 .ov-btn:hover{border-color:rgba(255,255,255,0.4);color:#fff;}
 
-/* ── SPARKS ── */
+/* ── FULLSCREEN ── */
+.fs-btn{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(192,57,43,0.12);border:1px solid rgba(192,57,43,0.3);
+  border-radius:3px;padding:5px 10px;cursor:pointer;transition:all .2s;
+  font-size:10px;color:rgba(200,140,100,0.8);letter-spacing:1px;
+  font-family:'Share Tech Mono',monospace;
+}
+.fs-btn:hover{background:rgba(192,57,43,0.22);color:#e8c090;}
+.fs-btn svg{width:14px;height:14px;flex-shrink:0;}
+
+/* Fullscreen panel mode */
+body.fs-mode{padding:0 !important;background:#07030200;}
+body.fs-mode .hdr,
+body.fs-mode .clue-panel,
+body.fs-mode .prog-wrap{display:none !important;}
+body.fs-mode .panel-wrap{
+  position:fixed !important;inset:0 !important;
+  max-width:100% !important;width:100% !important;
+  z-index:300;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#110704,#1a0a04);
+  padding:10px;
+}
+body.fs-mode .panel{width:100%;max-width:560px;}
+body.fs-mode #svg-layer{position:absolute !important;}
+body.fs-mode .fs-btn-exit{display:flex !important;}
+.fs-btn-exit{
+  display:none;
+  position:fixed;top:10px;right:10px;z-index:400;
+  background:rgba(0,0,0,0.7);border:1px solid rgba(192,57,43,0.4);
+  border-radius:3px;padding:7px 12px;cursor:pointer;
+  font-family:'Share Tech Mono',monospace;font-size:10px;
+  color:rgba(200,140,100,0.8);letter-spacing:1px;gap:6px;
+  align-items:center;
+}
+.fs-btn-exit:hover{color:#e8c090;border-color:rgba(192,57,43,0.7);}
 .spark{position:fixed;border-radius:50%;pointer-events:none;z-index:600;animation:spk 1s ease forwards;}
 @keyframes spk{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(0)}}
 @keyframes scfl{0%{opacity:.5}100%{opacity:0}}
@@ -224,7 +260,19 @@ body{
     <div class="hdr-title">PANNELLO CIRCUITI</div>
     <div class="hdr-sub">NEXUS // UNITÀ DI CONTROLLO B-7 // COLLEGAMENTO RICHIESTO</div>
   </div>
-  <div class="hdr-badge" id="badge">BLOCCAT0</div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div class="fs-btn" onclick="enterFS()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      SCHERMO INTERO
+    </div>
+    <div class="hdr-badge" id="badge">BLOCCAT0</div>
+  </div>
+</div>
+
+<!-- EXIT FULLSCREEN BTN -->
+<div class="fs-btn-exit" id="fs-exit" onclick="exitFS()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+  ESCI
 </div>
 
 <!-- CLUES -->
@@ -745,6 +793,45 @@ window.addEventListener('resize',()=>{
     const w=WIRES.find(x=>x.id===wid);
     drawCable(conn.from,conn.to,w.color,wid);
   });
+});
+
+// ════════════════════════════════════
+//  FULLSCREEN
+// ════════════════════════════════════
+function enterFS(){
+  document.body.classList.add('fs-mode');
+  document.getElementById('fs-exit').style.display='flex';
+  // Try native fullscreen API
+  const el = document.documentElement;
+  if(el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+  else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  // Redraw cables after layout settles
+  setTimeout(redrawCables, 150);
+}
+
+function exitFS(){
+  document.body.classList.remove('fs-mode');
+  document.getElementById('fs-exit').style.display='none';
+  if(document.exitFullscreen && document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+  else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+  setTimeout(redrawCables, 150);
+}
+
+function redrawCables(){
+  const svg = document.getElementById('svg-layer');
+  // Remove all permanent cables (not drag lines)
+  Array.from(svg.children).forEach(el=>{
+    if(el.id !== 'drag-line' && el.id !== 'drag-hilite') svg.removeChild(el);
+  });
+  Object.entries(connections).forEach(([wid, conn])=>{
+    const w = WIRES.find(x => x.id === wid);
+    drawCable(conn.from, conn.to, w.color, wid);
+  });
+}
+
+// Exit fullscreen on ESC key
+document.addEventListener('fullscreenchange', ()=>{
+  if(!document.fullscreenElement && document.body.classList.contains('fs-mode')) exitFS();
 });
 
 window.addEventListener('load',()=>{

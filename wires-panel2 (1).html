@@ -254,14 +254,14 @@ body{
   <div class="ov-sub" id="win-score-label" style="font-size:14px;margin-bottom:2px;color:#e8d090;"></div>
   <div class="ov-sub">Tutti i collegamenti sono corretti.<br>Il pannello è ora attivo.</div>
   <div class="ov-code" id="win-code"></div>
-  <div class="ov-note">inserisci questo codice nella webapp per i punti</div>
+  <div class="ov-note">inserisci questo codice nel campo risposta per procedere</div>
   <button class="ov-btn" onclick="restart()">↺ RIPROVA</button>
 </div>
 <div class="ov" id="ov-fail">
   <div class="ov-icon">💥</div><h1>CORTOCIRCUITO</h1>
-  <div class="ov-sub">Troppi collegamenti errati. Il pannello è danneggiato.</div>
-  <div class="ov-code" style="color:#e67e22" id="fail-code"></div>
-  <div class="ov-note">inserisci questo codice per continuare</div>
+  <div class="ov-sub">Troppi errori. Il pannello ha registrato la tua posizione.<br>Puoi comunque procedere — senza punti.</div>
+  <div class="ov-code" style="color:#e67e22" id="fail-code">NEXUS-B7-ONLINE</div>
+  <div class="ov-note">inserisci questo codice nel campo risposta per procedere</div>
   <button class="ov-btn" onclick="restart()">↺ RIPROVA</button>
 </div>
 
@@ -678,13 +678,15 @@ function spawnSparks(el,color){
 // ════════════════════════════════════
 function doWin(){
   gameOver=true;
-  const code   = CODES[wrongCount] || CODES[2];
   const pts    = SCORES_BY_ERRORS[wrongCount] ?? 4;
   const labels = {0:'⭐⭐⭐ PERFETTO — 0 errori', 1:'⭐⭐ BUONO — 1 errore', 2:'⭐ SUFFICIENTE — 2 errori'};
-  const colors = {0:'#2ec97e', 1:'#f7c948', 2:'#ff8c42'};
-  document.getElementById('win-code').textContent = GAME_ID ? `✓ Punteggio salvato: ${pts}/10` : code;
-  document.getElementById('win-code').style.color = colors[wrongCount] || colors[2];
+  const scoreColors = {0:'#2ec97e', 1:'#f7c948', 2:'#ff8c42'};
+  // Score label (colored by performance)
   document.getElementById('win-score-label').textContent = labels[wrongCount] || labels[2];
+  document.getElementById('win-score-label').style.color = scoreColors[wrongCount] || scoreColors[2];
+  // Unlock code — always the same, needed to proceed
+  document.getElementById('win-code').textContent = 'NEXUS-B7-ONLINE';
+  document.getElementById('win-code').style.color = '#2ec97e';
   document.getElementById('badge').textContent='ATTIVO';
   document.getElementById('badge').style.color='#2ec97e';
   document.getElementById('badge').style.borderColor='rgba(46,201,126,0.3)';
@@ -694,7 +696,6 @@ function doWin(){
 }
 function doFail(){
   gameOver=true;
-  document.getElementById('fail-code').textContent = GAME_ID ? '✗ Punteggio: 0/10' : CODE_FAIL;
   const elapsed = Math.round((Date.now() - (window._startTime||Date.now())) / 1000);
   saveScore(0, elapsed);
   setTimeout(()=>document.getElementById('ov-fail').classList.add('show'),300);

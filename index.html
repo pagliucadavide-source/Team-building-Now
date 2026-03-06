@@ -6036,7 +6036,7 @@ function PlayerGameView({ game, onBack }) {
                     🧩 PUZZLE INTERATTIVO — risolvi e inserisci il codice qui sotto
                   </div>
                   <iframe
-                    src={enigma.puzzleUrl}
+                    src={`${enigma.puzzleUrl}${enigma.puzzleUrl.includes('?') ? '&' : '?'}gameId=${game.id}&playerCode=${playerCode}&enigmaIdx=${enigmaIdx}`}
                     width="100%"
                     height="520"
                     frameBorder="0"

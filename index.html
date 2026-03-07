@@ -3626,21 +3626,26 @@ function useVoice() {
   };
 
   // Speak sentence by sentence for natural delivery
+  const cancelledRef = useRef(false);
+
   const speakChunked = useCallback((rawText, { onEnd } = {}, voiceOverride = null) => {
     try {
+      cancelledRef.current = false;
       synthRef.current.cancel();
       if (!rawText?.trim()) return;
       const voice = voiceOverride || pickBestVoice();
       const chunks = preprocess(rawText);
       let idx = 0;
       const speakNext = () => {
+        if (cancelledRef.current) return;
         if (idx >= chunks.length) { onEnd?.(); return; }
         const chunk = chunks[idx++];
         setTimeout(() => {
+          if (cancelledRef.current) return;
           const utt = new SpeechSynthesisUtterance(chunk.text);
           if (voice) { utt.voice = voice; utt.lang = voice.lang; }
-          utt.rate   = 0.90;  // slightly slower than default — natural pacing
-          utt.pitch  = 0.95;  // barely below default — subtle gravitas, fully clear
+          utt.rate   = 0.90;
+          utt.pitch  = 0.95;
           utt.volume = 1.0;
           utt.onend   = speakNext;
           utt.onerror = speakNext;
@@ -3652,14 +3657,19 @@ function useVoice() {
   }, [pickBestVoice]);
 
   const stop = useCallback(() => {
-    try { synthRef.current.cancel(); } catch {}
+    try { cancelledRef.current = true; synthRef.current.cancel(); } catch {}
   }, []);
 
   useEffect(() => {
     const load = () => synthRef.current.getVoices();
     load();
     synthRef.current.addEventListener("voiceschanged", load);
-    return () => synthRef.current.removeEventListener("voiceschanged", load);
+    const onMute = () => { cancelledRef.current = true; synthRef.current.cancel(); };
+    window.addEventListener('nexus-mute', onMute);
+    return () => {
+      synthRef.current.removeEventListener("voiceschanged", load);
+      window.removeEventListener('nexus-mute', onMute);
+    };
   }, []);
 
   return { speakChunked, stop, pickBestVoice, scoreVoice };
@@ -6290,7 +6300,10 @@ function App() {
           onClick={() => {
             const next = !muted;
             setMuted(next);
-            if (next) window.speechSynthesis?.cancel();
+            if (next) {
+              window.speechSynthesis?.cancel();
+              window.dispatchEvent(new CustomEvent('nexus-mute'));
+            }
           }}
           title={muted ? "Riattiva audio" : "Disattiva audio"}
           style={{

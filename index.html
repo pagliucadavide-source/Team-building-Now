@@ -356,16 +356,32 @@ function YouTubePlayer({ url, autoplay = false }) {
   const id = ytId(url);
   if (!id) return null;
   const [playing, setPlaying] = React.useState(autoplay);
+  const { muted } = useMute();
+  const iframeRef = React.useRef(null);
+
   const thumb = "https://img.youtube.com/vi/" + id + "/hqdefault.jpg";
   const embedUrl = "https://www.youtube-nocookie.com/embed/" + id +
-    "?rel=0&loop=1&playlist=" + id + "&modestbranding=1" +
-    (playing ? "&autoplay=1" : "");
+    "?rel=0&loop=1&playlist=" + id + "&modestbranding=1&enablejsapi=1" +
+    (playing ? "&autoplay=1" : "") +
+    (muted ? "&mute=1" : "");
+
+  // Send mute/unmute via postMessage to existing iframe
+  React.useEffect(() => {
+    if (!iframeRef.current) return;
+    const cmd = muted ? "mute" : "unMute";
+    try {
+      iframeRef.current.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: cmd, args: [] }), "*"
+      );
+    } catch {}
+  }, [muted]);
 
   if (playing) {
     return (
       <div style={{ borderRadius: "6px", overflow: "hidden", marginBottom: "16px",
         border: "1px solid rgba(201,168,76,0.3)", background: "#000" }}>
         <iframe
+          ref={iframeRef}
           src={embedUrl}
           width="100%" height="220"
           frameBorder="0"
@@ -3831,12 +3847,17 @@ function CinematicIntro({ images = [], onComplete }) {
   const audioCtxRef = useRef(null);
   const scene = script.current[sceneIdx];
 
-  // ── Audio engine ──
+  // ── Stop audio immediately when muted ──
   useEffect(() => {
     if (muted) {
       try { audioCtxRef.current?.close(); audioCtxRef.current = null; } catch {}
-      return;
+      window.speechSynthesis?.cancel();
     }
+  }, [muted]);
+
+  // ── Audio engine ──
+  useEffect(() => {
+    if (muted) return;
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       audioCtxRef.current = ctx;
@@ -4856,10 +4877,20 @@ function VictoryScreen({ playerName, gameName, totalScore, maxScore, clientLogo,
 
   // ── Cinematic music: emotional orchestral swell ────────────────────────────
   const { muted: globalMuted } = useMute();
+  const musicCtxRef = useRef(null);
+
+  // Stop immediately when muted mid-play
+  useEffect(() => {
+    if (globalMuted) {
+      try { musicCtxRef.current?.close(); musicCtxRef.current = null; } catch {}
+    }
+  }, [globalMuted]);
+
   useEffect(() => {
     if (globalMuted) return;
     let ctx;    try {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
+      musicCtxRef.current = ctx;
 
       // Master chain: compressor → gain → destination
       const comp = ctx.createDynamicsCompressor();

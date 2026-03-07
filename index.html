@@ -3833,7 +3833,10 @@ function CinematicIntro({ images = [], onComplete }) {
 
   // ── Audio engine ──
   useEffect(() => {
-    if (muted) return;
+    if (muted) {
+      try { audioCtxRef.current?.close(); audioCtxRef.current = null; } catch {}
+      return;
+    }
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       audioCtxRef.current = ctx;
@@ -3899,7 +3902,7 @@ function CinematicIntro({ images = [], onComplete }) {
         } catch {}
       };
     } catch {}
-  }, []);
+  }, [muted]);
 
   // ── Canvas particles ──
   useEffect(() => {
@@ -4855,8 +4858,7 @@ function VictoryScreen({ playerName, gameName, totalScore, maxScore, clientLogo,
   const { muted: globalMuted } = useMute();
   useEffect(() => {
     if (globalMuted) return;
-    let ctx;
-    try {
+    let ctx;    try {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
 
       // Master chain: compressor → gain → destination
@@ -4939,7 +4941,7 @@ function VictoryScreen({ playerName, gameName, totalScore, maxScore, clientLogo,
 
     } catch(e) {}
     return () => { try { ctx?.close(); } catch {} };
-  }, []);
+  }, [globalMuted]);
 
   // ── Particle canvas (golden light rays + fireflies) ───────────────────────
   useEffect(() => {
@@ -6036,7 +6038,7 @@ function PlayerGameView({ game, onBack }) {
                     🧩 PUZZLE INTERATTIVO — risolvi e inserisci il codice qui sotto
                   </div>
                   <iframe
-                    src={`${enigma.puzzleUrl}${enigma.puzzleUrl.includes('?') ? '&' : '?'}gameId=${game.id}&playerCode=${playerCode}&enigmaIdx=${enigmaIdx}`}
+                    src={enigma.puzzleUrl}
                     width="100%"
                     height="520"
                     frameBorder="0"

@@ -1991,7 +1991,7 @@ function EnigmaPreviewModal({ enigma, index, total, game, onPrev, onNext, onClos
               {enigma.files?.length > 0 && renderFiles(enigma.files)}
 
               {/* GPS coords preview */}
-              {enigma.preLat && enigma.preLng && (
+              {enigma.lat && enigma.lng && (
                 <div style={{ marginTop: "16px", ...styles.card, background: "rgba(201,168,76,0.04)",
                   border: `1px solid rgba(201,168,76,0.2)`, textAlign: "center" }}>
                   <div style={{ fontSize: "24px", marginBottom: "8px" }}>📍</div>
@@ -1999,7 +1999,7 @@ function EnigmaPreviewModal({ enigma, index, total, game, onPrev, onNext, onClos
                     POSIZIONE GPS RICHIESTA
                   </div>
                   <div style={{ fontFamily: G.fontMono, fontSize: "13px", color: G.gold }}>
-                    {enigma.preLat}, {enigma.preLng}
+                    {enigma.lat}, {enigma.lng}
                   </div>
                   {enigma.radius && (
                     <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.muted, marginTop: "4px" }}>
@@ -5366,17 +5366,8 @@ function PlayerGameView({ game, onBack }) {
   const enigma = game.enigmas[enigmaIdx];
   const isLast = enigmaIdx === game.enigmas.length - 1;
 
-  // Parse coords for current enigma
-  const getCoords = () => {
-    if (!enigma?.lat || !enigma?.lng) return null;
-    const lat = parseFloat(enigma.lat);
-    const lng = parseFloat(enigma.lng);
-    if (isNaN(lat) || isNaN(lng)) return null;
-    return { lat, lng };
-  };
-
   // Stop all geo watchers
-  const stopGeo = () => {
+  const stopGeo = useCallback(() => {
     if (watchIdRef.current !== null) {
       try { navigator.geolocation.clearWatch(watchIdRef.current); } catch {}
       watchIdRef.current = null;
@@ -5385,7 +5376,20 @@ function PlayerGameView({ game, onBack }) {
       clearInterval(pollRef.current);
       pollRef.current = null;
     }
-  };
+  }, []);
+
+  // Parse coords for current enigma — use ref to avoid stale closure
+  const enigmaRef = useRef(enigma);
+  useEffect(() => { enigmaRef.current = enigma; }, [enigma]);
+
+  const getCoords = useCallback(() => {
+    const e = enigmaRef.current;
+    if (!e?.lat || !e?.lng) return null;
+    const lat = parseFloat(e.lat);
+    const lng = parseFloat(e.lng);
+    if (isNaN(lat) || isNaN(lng)) return null;
+    return { lat, lng };
+  }, []);
 
   // Called on every position update
   const onPosition = useCallback((pos) => {
@@ -5396,7 +5400,6 @@ function PlayerGameView({ game, onBack }) {
     setDistance(dm);
 
     if (dm <= GEO_RADIUS) {
-      // Unlock and keep unlocked
       if (!unlockedRef.current) {
         unlockedRef.current = true;
         setUnlockedState(true);
@@ -5409,7 +5412,7 @@ function PlayerGameView({ game, onBack }) {
         setGeoStatus("far");
       }
     }
-  }, [enigmaIdx]);
+  }, [getCoords]);
 
   // Start geolocation for current enigma
   const startGeo = useCallback(() => {
@@ -5468,7 +5471,7 @@ function PlayerGameView({ game, onBack }) {
       } catch {}
     }, 10000);
 
-  }, [enigmaIdx, onPosition]);
+  }, [enigmaIdx, onPosition, stopGeo, getCoords]);
 
   // Start geo when entering enigma phase or changing enigma
   useEffect(() => {

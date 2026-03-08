@@ -6193,11 +6193,40 @@ function PlayerGameView({ game, onBack }) {
               </a>
             </div>
           )}
-          <div style={{ textAlign: "center" }}>
-            <button className="btn-gold" style={{ ...styles.btnPrimary, padding: "16px 48px", fontSize: "18px" }} onClick={nextEnigma}>
-              {isLast ? "🏁 COMPLETA MISSIONE" : "→ PROSSIMO ENIGMA"}
-            </button>
-          </div>
+          {/* Mostra il bottone SOLO se: è l'ultimo enigma, OPPURE il prossimo enigma NON ha geolocalizzazione */}
+          {(isLast || (() => {
+            const next = game.enigmas[enigmaIdx + 1];
+            return !next || !(next.lat && next.lng && !isNaN(parseFloat(next.lat)) && !isNaN(parseFloat(next.lng)));
+          })()) && (
+            <div style={{ textAlign: "center" }}>
+              <button className="btn-gold" style={{ ...styles.btnPrimary, padding: "16px 48px", fontSize: "18px" }} onClick={nextEnigma}>
+                {isLast ? "🏁 COMPLETA MISSIONE" : "→ PROSSIMO ENIGMA"}
+              </button>
+            </div>
+          )}
+          {/* Se il prossimo enigma ha geo: mostra messaggio "spostati" */}
+          {!isLast && (() => {
+            const next = game.enigmas[enigmaIdx + 1];
+            return next && next.lat && next.lng && !isNaN(parseFloat(next.lat)) && !isNaN(parseFloat(next.lng));
+          })() && (
+            <div style={{
+              textAlign: "center",
+              padding: "20px",
+              background: "rgba(201,168,76,0.06)",
+              border: "1px solid rgba(201,168,76,0.25)",
+              borderRadius: "12px",
+              marginTop: "8px"
+            }}>
+              <div style={{ fontSize: "32px", marginBottom: "10px" }}>🧭</div>
+              <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.gold, letterSpacing: "3px", marginBottom: "6px" }}>
+                PROSSIMO ENIGMA
+              </div>
+              <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted, letterSpacing: "1px", lineHeight: "1.7" }}>
+                Spostati verso la prossima destinazione.<br/>
+                Il gioco si sbloccherà automaticamente quando sarai vicino.
+              </div>
+            </div>
+          )}
         </div>
         {agentOpen && <AgentXChat game={game} currentEnigma={enigma} onClose={() => setAgentOpen(false)} onUserMessage={handleAgentXMessage} />}
       </div>

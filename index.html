@@ -2439,39 +2439,40 @@ function AdminGameEditor({ game, onSave, onBack }) {
           </div>
         </div>
       ))}
-      <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
-        <button className="btn-outline" style={{ ...styles.btn, flex: 1, padding: "16px" }} onClick={addE}>
-          🧩 AGGIUNGI ENIGMA
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginTop: "8px" }}>
+        <button className="btn-outline" style={{ ...styles.btn, width: "100%", padding: "16px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }} onClick={addE}>
+          🧩 ENIGMA
         </button>
         <button
           style={{
-            flex: 1, padding: "16px",
-            fontFamily: G.fontMono, fontSize: "13px", letterSpacing: "2px",
-            background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.5)",
+            width: "100%", padding: "16px",
+            fontFamily: G.fontMono, fontSize: "12px", letterSpacing: "1px",
+            background: "rgba(201,168,76,0.12)", border: "2px solid rgba(201,168,76,0.7)",
             borderRadius: "4px", cursor: "pointer", color: G.goldLight,
             transition: "all 0.15s",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+            fontWeight: "bold",
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(201,168,76,0.18)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "rgba(201,168,76,0.08)"; }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(201,168,76,0.25)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "rgba(201,168,76,0.12)"; }}
           onClick={addAgentXE}
         >
-          🤖 AGGIUNGI ENIGMA AGENTX
+          🤖 ENIGMA AGENTX
         </button>
         <button
           style={{
-            flex: 1, padding: "16px",
-            fontFamily: G.fontMono, fontSize: "13px", letterSpacing: "2px",
+            width: "100%", padding: "16px",
+            fontFamily: G.fontMono, fontSize: "12px", letterSpacing: "1px",
             background: "rgba(192,57,43,0.1)", border: "1px solid rgba(192,57,43,0.4)",
             borderRadius: "4px", cursor: "pointer", color: "#e8a0a0",
             transition: "all 0.15s",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
           }}
           onMouseEnter={e => { e.currentTarget.style.background = "rgba(192,57,43,0.22)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "rgba(192,57,43,0.1)"; }}
           onClick={addVideoE}
         >
-          🎥 AGGIUNGI SFIDA VIDEO AI
+          🎥 SFIDA VIDEO AI
         </button>
       </div>
     </div>

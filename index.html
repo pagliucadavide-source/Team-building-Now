@@ -1517,17 +1517,17 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
       '{"punteggio":<intero 1-10>,"nota":"<osservazione 1-2 frasi>"}';
 
     try {
-      const res = await fetch("/api/claude", {
+      const res = await fetch("/api/openai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "gpt-4o",
           max_tokens: 200,
           messages: [{
             role: "user",
             content: [
-              { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
-              { type: "text",  text: prompt }
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}`, detail: "low" } },
+              { type: "text", text: prompt }
             ]
           }]
         })
@@ -1608,11 +1608,11 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
       '"dettaglio_scatti":' + (snaps.length > 0 ? JSON.stringify(snaps) : "[]") + '}';
 
     try {
-      const res = await fetch("/api/claude", {
+      const res = await fetch("/api/openai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "gpt-4o",
           max_tokens: 700,
           messages: [{ role: "user", content: prompt }],
         }),
@@ -2561,12 +2561,12 @@ In base a questi dati, scrivi un REPORT FORMATIVO in italiano. Il report deve:
 
 Tono: professionale ma accessibile. Lunghezza: 400-600 parole. Non inventare dati che non hai — se mancano informazioni, basati su ciò che hai.`;
 
-      const apiCall = (body) => fetch("/api/claude", {
+      const apiCall = (body) => fetch("/api/openai", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", ...body }),
+        body: JSON.stringify({ model: "gpt-4o", ...body }),
       });
 
       const r1 = await apiCall({ max_tokens: 1200, messages: [{ role: "user", content: prompt }] });
@@ -3502,11 +3502,11 @@ Sei il PROTAGONISTA di questo enigma. Il tuo compito è:
   const startEnigma = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/claude", {
+      const res = await fetch("/api/openai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
+          model: "gpt-4o",
           max_tokens: 400,
           system: systemPrompt,
           messages: [{ role: "user", content: "Inizia. Presentati brevemente e lancia il tuo enigma." }],
@@ -3530,11 +3530,11 @@ Sei il PROTAGONISTA di questo enigma. Il tuo compito è:
     setLoading(true);
     try {
       const apiMessages = newMsgs.map(m => ({ role: m.role, content: m.text }));
-      const res = await fetch("/api/claude", {
+      const res = await fetch("/api/openai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
+          model: "gpt-4o",
           max_tokens: 400,
           system: systemPrompt,
           messages: apiMessages,
@@ -3716,13 +3716,13 @@ function AgentXChat({ game, currentEnigma, onClose, onUserMessage }) {
         : "";
       const systemPrompt = `${game.agentXPersonality || "Sei AgentX, un agente misterioso."}\n\nContesto della partita: ${game.story}${enigmaCtx}\n\nIMPORTANTE: Non rivelare mai la risposta diretta. Dai indizi progressivi solo se il giocatore li chiede esplicitamente. Mantieni sempre il tono narrativo misterioso. Rispondi sempre in modo BREVE e CONCISO: massimo 2-3 frasi per messaggio. Niente lunghi monologhi.`;
       const apiMessages = newMsgs.map((m) => ({ role: m.role, content: m.text }));
-      const res = await fetch("/api/claude", {
+      const res = await fetch("/api/openai", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
+          model: "gpt-4o",
           max_tokens: 300,
           system: systemPrompt,
           messages: apiMessages,
@@ -5528,7 +5528,7 @@ function VictoryScreen({ playerName, gameName, totalScore, maxScore, clientLogo,
 
 
 // ─── PLAYER GAME VIEW ─────────────────────────────────────────────────────────
-const GEO_RADIUS = 30; // metres — realistic for smartphone GPS accuracy
+const GEO_RADIUS = 80; // metres — 80m is realistic for smartphone GPS in urban areas (±20-50m accuracy)
 
 
 // ─── ENIGMA TIMER (6 min hourglass) ─────────────────────────────────────────
@@ -5769,9 +5769,23 @@ function PlayerGameView({ game, onBack }) {
       }).catch(() => {});
     }
 
+    const GEO_OPTIONS = { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 };
+
     const onError = (err) => {
       console.warn("Geo error:", err.code, err.message);
-      setGeoStatus("error");
+      // TIMEOUT (code 3) → retry silently instead of hard-failing
+      if (err.code === 3) {
+        try {
+          navigator.geolocation.getCurrentPosition(onPosition, () => {}, GEO_OPTIONS);
+        } catch {}
+        return;
+      }
+      // PERMISSION DENIED (code 1) → hard fail
+      if (err.code === 1) { setGeoStatus("error"); return; }
+      // POSITION UNAVAILABLE (code 2) → retry after 3s
+      setTimeout(() => {
+        try { navigator.geolocation.getCurrentPosition(onPosition, () => {}, GEO_OPTIONS); } catch {}
+      }, 3000);
     };
 
     // Primary: watchPosition for live updates
@@ -5779,23 +5793,23 @@ function PlayerGameView({ game, onBack }) {
       watchIdRef.current = navigator.geolocation.watchPosition(
         onPosition,
         onError,
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+        GEO_OPTIONS
       );
     } catch (e) {
       setGeoStatus("error");
     }
 
-    // Fallback polling every 10s in case watchPosition stalls (common on some Android)
+    // Fallback polling every 8s in case watchPosition stalls (common on Android WebView)
     pollRef.current = setInterval(() => {
       if (unlockedRef.current) { clearInterval(pollRef.current); return; }
       try {
         navigator.geolocation.getCurrentPosition(
           onPosition,
           () => {},
-          { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
         );
       } catch {}
-    }, 10000);
+    }, 8000);
 
   }, [enigmaIdx, onPosition, stopGeo, getCoords]);
 
@@ -5827,13 +5841,13 @@ function PlayerGameView({ game, onBack }) {
       };
       try {
         watchIdRef.current = navigator.geolocation.watchPosition(
-          onNextPos, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+          onNextPos, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
         );
       } catch {}
       pollRef.current = setInterval(() => {
         try {
           navigator.geolocation.getCurrentPosition(
-            onNextPos, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+            onNextPos, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
           );
         } catch {}
       }, 8000);
@@ -6291,20 +6305,27 @@ function PlayerGameView({ game, onBack }) {
                   </div>
                 )}
 
-                <div style={{ marginBottom: "20px" }}>
+                <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap", marginBottom: "20px" }}>
                   <a
                     href={`https://maps.google.com/?q=${enigma.lat},${enigma.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-gold"
-                    style={{ ...styles.btnPrimary, display: "inline-block", textDecoration: "none", padding: "12px 28px" }}
+                    style={{ ...styles.btnPrimary, display: "inline-block", textDecoration: "none", padding: "12px 22px" }}
                   >
-                    🗺 APRI SU GOOGLE MAPS
+                    🗺 APRI SU MAPS
                   </a>
+                  <button
+                    className="btn-gold"
+                    style={{ ...styles.btn, padding: "12px 22px", fontSize: "13px", borderColor: G.gold, color: G.gold }}
+                    onClick={() => { stopGeo(); setTimeout(startGeo, 200); }}
+                  >
+                    ↺ RIPROVA GPS
+                  </button>
                 </div>
 
                 <p style={{ color: G.muted, fontFamily: G.fontMono, fontSize: "11px", letterSpacing: "1px" }}>
-                  GPS attivo — aggiornamento automatico
+                  GPS attivo — aggiornamento ogni 8 secondi
                 </p>
               </div>
             )}

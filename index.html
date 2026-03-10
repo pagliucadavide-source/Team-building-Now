@@ -5908,6 +5908,11 @@ function PlayerGameView({ game, onBack }) {
   };
 
   const nextEnigma = () => {
+    stopGeo();
+    unlockedRef.current = false;
+    setUnlockedState(false);
+    setDistance(null);
+    setGeoStatus("idle");
     if (isLast) { setPhase("complete"); }
     else {
       setEnigmaIdx((i) => i + 1);
@@ -6567,48 +6572,10 @@ function PlayerGameView({ game, onBack }) {
             <div style={{ marginBottom: "20px" }}><YouTubePlayer url={enigma.postYoutube} autoplay /></div>
           )}
 
-          {/* ── Prossima destinazione GPS ── */}
-          {!isLast && enigma.postLat && enigma.postLng && !isNaN(parseFloat(enigma.postLat)) && !isNaN(parseFloat(enigma.postLng)) && (
-            <div style={{
-              ...styles.card,
-              marginBottom: "24px",
-              border: `1px solid rgba(201,168,76,0.4)`,
-              background: "rgba(201,168,76,0.06)",
-              textAlign: "center"
-            }}>
-              <div style={{ fontSize: "36px", marginBottom: "10px" }}>🧭</div>
-              <h3 style={{ ...styles.title, fontSize: "18px", marginBottom: "8px" }}>PROSSIMA DESTINAZIONE</h3>
-              <p style={{ color: G.muted, fontFamily: G.fontMono, fontSize: "13px", marginBottom: "18px", letterSpacing: "1px" }}>
-                Raggiungi le seguenti coordinate per sbloccare il prossimo enigma
-              </p>
-              <div style={{ display: "flex", justifyContent: "center", gap: "16px", marginBottom: "20px", flexWrap: "wrap" }}>
-                <div style={{ ...styles.card, padding: "12px 20px", background: G.bg3, textAlign: "center", minWidth: "130px" }}>
-                  <div style={{ color: G.gold, fontFamily: G.fontMono, fontSize: "11px", letterSpacing: "2px", marginBottom: "4px" }}>LAT</div>
-                  <div style={{ fontFamily: G.fontMono, fontSize: "16px", fontWeight: "bold" }}>{parseFloat(enigma.postLat).toFixed(5)}</div>
-                </div>
-                <div style={{ ...styles.card, padding: "12px 20px", background: G.bg3, textAlign: "center", minWidth: "130px" }}>
-                  <div style={{ color: G.gold, fontFamily: G.fontMono, fontSize: "11px", letterSpacing: "2px", marginBottom: "4px" }}>LNG</div>
-                  <div style={{ fontFamily: G.fontMono, fontSize: "16px", fontWeight: "bold" }}>{parseFloat(enigma.postLng).toFixed(5)}</div>
-                </div>
-              </div>
-              <a
-                href={`https://maps.google.com/?q=${enigma.postLat},${enigma.postLng}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-gold"
-                style={{ ...styles.btnPrimary, display: "inline-block", padding: "12px 32px", textDecoration: "none", fontSize: "13px" }}
-              >
-                🗺 APRI SU GOOGLE MAPS
-              </a>
-            </div>
-          )}
-          {/* Bottone PROSSIMO ENIGMA / COMPLETA MISSIONE:
-              - Se è l'ultimo enigma: mostra sempre "COMPLETA MISSIONE"
-              - Se NON è l'ultimo: mostra il bottone solo se il prossimo enigma NON ha geo (lat/lng)
-                Il prossimo enigma ha geo = enigma corrente ha postLat/postLng OPPURE next.lat/next.lng */}
+          {/* ── Prossima destinazione GPS — rimossa: gestita nel blocco RAGGIUNGI IL PROSSIMO PUNTO sotto ── */}
+          {/* Bottone PROSSIMO ENIGMA / COMPLETA MISSIONE */}
           {(() => {
             if (isLast) {
-              // Sempre visibile per completare la missione
               return (
                 <div style={{ textAlign: "center" }}>
                   <button className="btn-gold" style={{ ...styles.btnPrimary, padding: "16px 48px", fontSize: "18px" }} onClick={nextEnigma}>
@@ -6620,59 +6587,83 @@ function PlayerGameView({ game, onBack }) {
             const next = game.enigmas[enigmaIdx + 1];
             const nextHasGeo = next && next.lat && next.lng &&
               !isNaN(parseFloat(next.lat)) && !isNaN(parseFloat(next.lng));
-            const postHasGeo = enigma.postLat && enigma.postLng &&
-              !isNaN(parseFloat(enigma.postLat)) && !isNaN(parseFloat(enigma.postLng));
-            const geoRequired = nextHasGeo || postHasGeo;
+            const geoRequired = nextHasGeo;
 
-            if (geoRequired) {
-              // Il prossimo enigma è geolocalizzato: NO bottone, mostra messaggio spostamento + distanza live
-              const next = game.enigmas[enigmaIdx + 1];
-              const mapsLat = next?.lat || enigma.postLat;
-              const mapsLng = next?.lng || enigma.postLng;
+            if (!geoRequired) {
+              // Nessuna geo sul prossimo enigma — bottone immediato
               return (
-                <div style={{
-                  textAlign: "center",
-                  padding: "24px 20px",
-                  background: "rgba(201,168,76,0.06)",
-                  border: "1px solid rgba(201,168,76,0.25)",
-                  borderRadius: "12px",
-                  marginTop: "8px"
-                }}>
-                  <div style={{ fontSize: "36px", marginBottom: "10px", animation: "spin 4s linear infinite", display: "inline-block" }}>🧭</div>
-                  <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.gold, letterSpacing: "3px", marginBottom: "8px" }}>
-                    RAGGIUNGI IL PROSSIMO PUNTO
-                  </div>
-                  <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted, letterSpacing: "1px", lineHeight: "1.8", marginBottom: "16px" }}>
-                    Il gioco si sbloccherà automaticamente<br/>quando sarai entro {GEO_RADIUS} metri dal punto.
-                  </div>
-                  {distance !== null && (
-                    <div style={{ display: "inline-block", background: G.bg3, border: `1px solid ${G.border}`, borderRadius: "40px", padding: "10px 28px", marginBottom: "16px" }}>
-                      <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.muted, letterSpacing: "2px", marginBottom: "2px" }}>DISTANZA</div>
-                      <div style={{ fontFamily: G.fontMono, fontSize: "26px", fontWeight: "bold",
-                        color: distance > 200 ? G.red : distance > GEO_RADIUS ? "#e0a020" : G.success }}>
-                        {distance > 999 ? `${(distance / 1000).toFixed(1)} km` : `${distance} m`}
-                      </div>
-                    </div>
-                  )}
-                  {mapsLat && mapsLng && (
-                    <div>
-                      <a href={`https://maps.google.com/?q=${mapsLat},${mapsLng}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="btn-gold"
-                        style={{ ...styles.btnPrimary, display: "inline-block", textDecoration: "none", padding: "10px 24px", fontSize: "12px" }}>
-                        🗺 APRI SU GOOGLE MAPS
-                      </a>
-                    </div>
-                  )}
+                <div style={{ textAlign: "center" }}>
+                  <button className="btn-gold" style={{ ...styles.btnPrimary, padding: "16px 48px", fontSize: "18px" }} onClick={nextEnigma}>
+                    → PROSSIMO ENIGMA
+                  </button>
                 </div>
               );
             }
-            // Nessuna geo richiesta: bottone normale
+
+            // Il prossimo enigma è geolocalizzato
+            const mapsLat = next.lat;
+            const mapsLng = next.lng;
+            const inRange = distance !== null && distance <= GEO_RADIUS;
+
             return (
-              <div style={{ textAlign: "center" }}>
-                <button className="btn-gold" style={{ ...styles.btnPrimary, padding: "16px 48px", fontSize: "18px" }} onClick={nextEnigma}>
-                  → PROSSIMO ENIGMA
-                </button>
+              <div style={{
+                textAlign: "center",
+                padding: "24px 20px",
+                background: inRange ? "rgba(46,213,115,0.06)" : "rgba(201,168,76,0.06)",
+                border: `1px solid ${inRange ? "rgba(46,213,115,0.4)" : "rgba(201,168,76,0.25)"}`,
+                borderRadius: "12px",
+                marginTop: "8px",
+                transition: "all 0.4s ease"
+              }}>
+                {!inRange ? (
+                  <>
+                    <div style={{ fontSize: "36px", marginBottom: "10px", animation: "spin 4s linear infinite", display: "inline-block" }}>🧭</div>
+                    <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.gold, letterSpacing: "3px", marginBottom: "8px" }}>
+                      RAGGIUNGI IL PROSSIMO PUNTO
+                    </div>
+                    <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted, letterSpacing: "1px", lineHeight: "1.8", marginBottom: "16px" }}>
+                      Avvicinati entro {GEO_RADIUS}m per sbloccare il prossimo enigma
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: "36px", marginBottom: "10px" }}>✅</div>
+                    <div style={{ fontFamily: G.fontMono, fontSize: "13px", color: G.success, letterSpacing: "2px", marginBottom: "12px" }}>
+                      SEI IN ZONA!
+                    </div>
+                  </>
+                )}
+
+                {/* Distanza live */}
+                {distance !== null && (
+                  <div style={{ display: "inline-block", background: G.bg3, border: `1px solid ${G.border}`, borderRadius: "40px", padding: "10px 28px", marginBottom: "16px" }}>
+                    <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.muted, letterSpacing: "2px", marginBottom: "2px" }}>DISTANZA</div>
+                    <div style={{ fontFamily: G.fontMono, fontSize: "26px", fontWeight: "bold",
+                      color: distance > 200 ? G.red : distance > GEO_RADIUS ? "#e0a020" : G.success }}>
+                      {distance > 999 ? `${(distance / 1000).toFixed(1)} km` : `${distance} m`}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+                  {/* Pulsante SBLOCCA — appare solo quando si è in zona */}
+                  {inRange && (
+                    <button
+                      className="btn-gold"
+                      style={{ ...styles.btnPrimary, padding: "14px 36px", fontSize: "16px", background: "linear-gradient(135deg, #2ed573, #27ae60)", borderColor: "#2ed573", animation: "pulse 1.5s ease infinite" }}
+                      onClick={nextEnigma}
+                    >
+                      🔓 SBLOCCA ENIGMA
+                    </button>
+                  )}
+                  {/* Maps — sempre visibile */}
+                  <a href={`https://maps.google.com/?q=${mapsLat},${mapsLng}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="btn-gold"
+                    style={{ ...styles.btn, display: "inline-block", textDecoration: "none", padding: "10px 20px", fontSize: "12px", color: G.gold, borderColor: G.gold }}>
+                    🗺 APRI SU MAPS
+                  </a>
+                </div>
               </div>
             );
           })()}

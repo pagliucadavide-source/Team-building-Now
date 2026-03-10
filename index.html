@@ -157,6 +157,18 @@ const EMPTY_VIDEO_ENIGMA = () => ({
   files: [],
 });
 
+const EMPTY_AGENTX_ENIGMA = () => ({
+  id: uid(),
+  type: "agentx-enigma",
+  title: "Enigma di AgentX",
+  agentXSecretAnswer: "",          // risposta segreta — solo l'admin la vede
+  agentXTone: "",                  // tono/personalità AgentX per questo enigma
+  agentXSecretCode: "",            // codice segreto che AgentX rivela quando corretta
+  postStory: "",
+  lat: "",
+  lng: "",
+});
+
 const EMPTY_GAME = () => ({
   id: uid(),
   name: "Nuova Partita",
@@ -1309,6 +1321,77 @@ function PlayersPanel({ players, onChange }) {
 
 
 // ─── VIDEO ENIGMA EDITOR (admin) ─────────────────────────────────────────────
+// ─── AGENTX ENIGMA EDITOR (Admin) ────────────────────────────────────────────
+function AgentXEnigmaEditor({ enigma, index, onChange, onDelete, onDuplicate }) {
+  const [open, setOpen] = useState(index === 0);
+  const upd = (k, v) => onChange({ ...enigma, [k]: v });
+
+  return (
+    <div style={{ ...styles.card, marginBottom: "16px", border: open ? "1px solid rgba(201,168,76,0.5)" : `1px solid ${G.border}`, background: open ? "rgba(201,168,76,0.03)" : G.bg2 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }} onClick={() => setOpen(!open)}>
+        <span style={{ ...styles.tag, background: "rgba(201,168,76,0.15)", borderColor: "rgba(201,168,76,0.6)" }}>🤖 {index + 1}</span>
+        <h3 style={{ ...styles.title, fontSize: "16px", margin: 0, flex: 1 }}>{enigma.title || `Enigma AgentX ${index + 1}`}</h3>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button className="btn-outline" style={{ ...styles.btn, padding: "4px 12px", fontSize: "11px" }} onClick={e => { e.stopPropagation(); onDuplicate(); }}>Duplica</button>
+          <button className="btn-danger" style={styles.btnDanger} onClick={e => { e.stopPropagation(); onDelete(); }}>✕</button>
+          <span style={{ color: G.muted }}>{open ? "▲" : "▼"}</span>
+        </div>
+      </div>
+      {open && (
+        <div style={{ marginTop: "20px" }}>
+          <hr style={styles.divider} />
+
+          {/* Info box */}
+          <div style={{ background: "rgba(201,168,76,0.07)", border: "1px solid rgba(201,168,76,0.25)", borderRadius: "4px", padding: "12px 16px", marginBottom: "20px", fontFamily: G.fontMono, fontSize: "12px", color: G.gold, letterSpacing: "1px", lineHeight: "1.7" }}>
+            🤖 <strong>ENIGMA AGENTX</strong><br/>
+            AgentX inventerà e presenterà l'enigma autonomamente.<br/>
+            Il giocatore deve rispondere solo via chat con AgentX.<br/>
+            Solo quando la risposta è corretta, AgentX rivelerà il codice segreto.
+          </div>
+
+          <Input label="Titolo (visibile al giocatore)" value={enigma.title} onChange={v => upd("title", v)} placeholder="Es: Il Messaggio Cifrato" />
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <Input label="Latitudine GPS (opzionale)" value={enigma.lat || ""} onChange={v => upd("lat", v)} placeholder="45.4654" />
+            <Input label="Longitudine GPS (opzionale)" value={enigma.lng || ""} onChange={v => upd("lng", v)} placeholder="9.1859" />
+          </div>
+
+          <div style={{ background: "rgba(192,57,43,0.07)", border: "1px solid rgba(192,57,43,0.3)", borderRadius: "4px", padding: "14px 16px", marginBottom: "16px" }}>
+            <Input
+              label="🔒 Risposta Segreta (solo admin — AgentX la conosce)"
+              value={enigma.agentXSecretAnswer}
+              onChange={v => upd("agentXSecretAnswer", v)}
+              placeholder="Es: FIBONACCI — AgentX costruirà un enigma attorno a questa risposta"
+            />
+            <Input
+              label="🔑 Codice Segreto (AgentX lo rivela se risposta corretta)"
+              value={enigma.agentXSecretCode}
+              onChange={v => upd("agentXSecretCode", v)}
+              placeholder="Es: NEXUS-7744 — il giocatore deve inserirlo per proseguire"
+            />
+          </div>
+
+          <Input
+            label="Tono / Personalità AgentX per questo enigma (opzionale)"
+            value={enigma.agentXTone}
+            onChange={v => upd("agentXTone", v)}
+            rows={3}
+            placeholder="Es: Parla come un antiquario che custodisce un segreto millenario. Usa metafore legate all'alchimia…"
+          />
+
+          <Input
+            label="Storytelling Post-Enigma (mostrato dopo il codice corretto)"
+            value={enigma.postStory || ""}
+            onChange={v => upd("postStory", v)}
+            rows={3}
+            placeholder="Narrativa svelata dopo che il giocatore ha risolto l'enigma..."
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function VideoEnigmaEditor({ enigma, index, onChange, onDelete }) {
   const [open, setOpen] = useState(true);
   const upd = (k, v) => onChange({ ...enigma, [k]: v });
@@ -2204,8 +2287,9 @@ function AdminGameEditor({ game, onSave, onBack }) {
   };
 
   const updE = (i, e) => updateG((prev) => { const en = [...prev.enigmas]; en[i] = e; return { ...prev, enigmas: en }; });
-  const addE      = () => updateG((prev) => ({ ...prev, enigmas: [...prev.enigmas, EMPTY_ENIGMA()] }));
-  const addVideoE = () => updateG((prev) => ({ ...prev, enigmas: [...prev.enigmas, EMPTY_VIDEO_ENIGMA()] }));
+  const addE        = () => updateG((prev) => ({ ...prev, enigmas: [...prev.enigmas, EMPTY_ENIGMA()] }));
+  const addVideoE   = () => updateG((prev) => ({ ...prev, enigmas: [...prev.enigmas, EMPTY_VIDEO_ENIGMA()] }));
+  const addAgentXE  = () => updateG((prev) => ({ ...prev, enigmas: [...prev.enigmas, EMPTY_AGENTX_ENIGMA()] }));
   const delE = (i) => updateG((prev) => ({ ...prev, enigmas: prev.enigmas.filter((_, j) => j !== i) }));
   const dupE = (i) => updateG((prev) => { const en = [...prev.enigmas]; en.splice(i + 1, 0, { ...en[i], id: uid() }); return { ...prev, enigmas: en }; });
 
@@ -2333,6 +2417,8 @@ function AdminGameEditor({ game, onSave, onBack }) {
         <div key={e.id}>
           {e.type === "video-challenge"
             ? <VideoEnigmaEditor enigma={e} index={i} onChange={(ne) => updE(i, ne)} onDelete={() => delE(i)} />
+            : e.type === "agentx-enigma"
+            ? <AgentXEnigmaEditor enigma={e} index={i} onChange={(ne) => updE(i, ne)} onDelete={() => delE(i)} onDuplicate={() => dupE(i)} />
             : <EnigmaEditor enigma={e} index={i} onChange={(ne) => updE(i, ne)} onDelete={() => delE(i)} onDuplicate={() => dupE(i)} />
           }
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "-12px", marginBottom: "16px", paddingRight: "4px" }}>
@@ -2356,6 +2442,21 @@ function AdminGameEditor({ game, onSave, onBack }) {
       <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
         <button className="btn-outline" style={{ ...styles.btn, flex: 1, padding: "16px" }} onClick={addE}>
           🧩 AGGIUNGI ENIGMA
+        </button>
+        <button
+          style={{
+            flex: 1, padding: "16px",
+            fontFamily: G.fontMono, fontSize: "13px", letterSpacing: "2px",
+            background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.5)",
+            borderRadius: "4px", cursor: "pointer", color: G.goldLight,
+            transition: "all 0.15s",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(201,168,76,0.18)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "rgba(201,168,76,0.08)"; }}
+          onClick={addAgentXE}
+        >
+          🤖 AGGIUNGI ENIGMA AGENTX
         </button>
         <button
           style={{
@@ -3359,6 +3460,230 @@ function AdminDashboard({ games, adminPassword, onEdit, onNewGame, onDeleteGame,
       />
     )}
     </>
+  );
+}
+
+// ─── AGENTX ENIGMA CHAT ───────────────────────────────────────────────────────
+// Fullscreen dedicated chat for agentx-enigma type. AgentX presents the enigma,
+// evaluates answers and reveals the secret code only when correct.
+function AgentXEnigmaChat({ game, enigma, onSolved }) {
+  const secretAnswer = (enigma.agentXSecretAnswer || "").trim().toLowerCase();
+  const secretCode   = enigma.agentXSecretCode || "???";
+  const tone         = enigma.agentXTone || game.agentXPersonality || "Sei AgentX, un agente misterioso.";
+
+  const systemPrompt = `${tone}
+
+Contesto della partita: ${game.story || ""}
+
+ISTRUZIONI SPECIALI — ENIGMA AGENTX:
+Sei il PROTAGONISTA di questo enigma. Il tuo compito è:
+1. Presentare un enigma originale e intrigante costruito attorno alla risposta segreta: "${secretAnswer}". Non rivelare mai la risposta. Costruisci un enigma narrativo, non una semplice domanda.
+2. Aspettare che il giocatore risponda. Se sbaglia, dai un indizio progressivo mantenendo il mistero.
+3. Quando il giocatore fornisce esattamente la risposta corretta (o una variante molto vicina), rivela il codice segreto con grande teatralità. Il codice segreto è: "${secretCode}". Includilo nel messaggio racchiuso tra asterischi così: *${secretCode}*
+4. Non rivelare mai il codice finché la risposta non è corretta.
+5. Risposte BREVI: max 3-4 righe. Tono criptico e narrativo.
+6. Parla sempre in italiano.`;
+
+  const [msgs, setMsgs] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [solved, setSolved] = useState(false);
+  const [revealedCode, setRevealedCode] = useState(null);
+  const bottomRef = useRef(null);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+
+  // Auto-start: AgentX opens with the enigma
+  useEffect(() => {
+    startEnigma();
+  }, []);
+
+  const startEnigma = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 400,
+          system: systemPrompt,
+          messages: [{ role: "user", content: "Inizia. Presentati brevemente e lancia il tuo enigma." }],
+        }),
+      });
+      const data = await res.json();
+      const reply = data.content?.find(c => c.type === "text")?.text || "...";
+      setMsgs([{ role: "assistant", text: reply }]);
+    } catch (err) {
+      setMsgs([{ role: "assistant", text: "Agente… connessione instabile. Riprova." }]);
+    }
+    setLoading(false);
+  };
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || loading || solved) return;
+    setInput("");
+    const newMsgs = [...msgs, { role: "user", text }];
+    setMsgs(newMsgs);
+    setLoading(true);
+    try {
+      const apiMessages = newMsgs.map(m => ({ role: m.role, content: m.text }));
+      const res = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 400,
+          system: systemPrompt,
+          messages: apiMessages,
+        }),
+      });
+      const data = await res.json();
+      const reply = data.content?.find(c => c.type === "text")?.text || "...";
+      const updatedMsgs = [...newMsgs, { role: "assistant", text: reply }];
+      setMsgs(updatedMsgs);
+
+      // Detect if AgentX revealed the secret code
+      if (reply.includes(`*${secretCode}*`) || reply.includes(secretCode)) {
+        setRevealedCode(secretCode);
+        setSolved(true);
+      }
+    } catch (err) {
+      setMsgs(prev => [...prev, { role: "assistant", text: `[AgentX] Errore: ${err.message}` }]);
+    }
+    setLoading(false);
+  };
+
+  // Render message text — highlight secret code
+  const renderMsgText = (text) => {
+    if (!revealedCode) return text;
+    const parts = text.split(new RegExp(`\\*?${revealedCode}\\*?`, "g"));
+    return parts.map((part, i) => (
+      <span key={i}>
+        {part}
+        {i < parts.length - 1 && (
+          <span style={{ fontFamily: G.fontMono, color: "#0ff", background: "rgba(0,255,255,0.1)", padding: "1px 6px", borderRadius: "3px", border: "1px solid rgba(0,255,255,0.4)", letterSpacing: "2px", fontWeight: "bold" }}>
+            {revealedCode}
+          </span>
+        )}
+      </span>
+    ));
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: "500px" }}>
+      {/* Header AgentX */}
+      <div style={{ background: "rgba(201,168,76,0.08)", borderBottom: `1px solid ${G.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ width: "10px", height: "10px", background: solved ? G.success : G.gold, borderRadius: "50%", boxShadow: `0 0 8px ${solved ? G.success : G.gold}`, animation: "flicker 2s infinite" }} />
+        <span style={{ ...styles.title, fontSize: "15px", flex: 1, letterSpacing: "3px" }}>AGENT X — {solved ? "ENIGMA RISOLTO" : "IN ATTESA"}</span>
+        {solved && <span style={{ ...styles.tag, borderColor: G.success, color: G.success }}>✓ CODICE SBLOCCATO</span>}
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+        {msgs.map((m, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
+            <div style={{
+              maxWidth: "80%", padding: "12px 16px",
+              borderRadius: m.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+              background: m.role === "user" ? "rgba(201,168,76,0.12)" : G.bg3,
+              border: `1px solid ${m.role === "user" ? "rgba(201,168,76,0.3)" : G.border}`,
+              fontSize: "15px", lineHeight: "1.6",
+              fontFamily: m.role === "assistant" ? G.fontMono : G.fontBody,
+              color: m.role === "assistant" ? G.goldLight : G.text,
+            }}>
+              {m.role === "assistant" && <span style={{ color: G.gold, fontSize: "10px", display: "block", marginBottom: "6px", letterSpacing: "2px" }}>◈ AGENT X</span>}
+              {m.role === "assistant" ? renderMsgText(m.text) : m.text}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display: "flex", gap: "5px", padding: "8px 4px" }}>
+            {[0,1,2].map(i => <div key={i} style={{ width: "7px", height: "7px", background: G.gold, borderRadius: "50%", animation: `flicker ${0.5 + i * 0.2}s ease infinite` }} />)}
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Secret code box — shown when solved */}
+      {solved && revealedCode && (
+        <div style={{ margin: "0 20px 16px", background: "rgba(0,255,200,0.05)", border: "1px solid rgba(0,255,200,0.35)", borderRadius: "6px", padding: "16px 20px", textAlign: "center" }}>
+          <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: "#0fca8a", letterSpacing: "3px", marginBottom: "8px" }}>◈ CODICE SEGRETO SBLOCCATO</div>
+          <div style={{ fontFamily: G.fontMono, fontSize: "26px", color: "#0ff", letterSpacing: "6px", fontWeight: "bold", textShadow: "0 0 14px rgba(0,255,255,0.5)" }}>{revealedCode}</div>
+          <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted, letterSpacing: "1px", marginTop: "8px" }}>Inserisci questo codice qui sotto per proseguire</div>
+        </div>
+      )}
+
+      {/* Input */}
+      {!solved && (
+        <div style={{ padding: "14px 20px", borderTop: `1px solid ${G.border}`, display: "flex", gap: "10px" }}>
+          <input
+            style={{ ...styles.input, flex: 1, fontSize: "15px" }}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder="Rispondi ad AgentX…"
+            onKeyDown={e => e.key === "Enter" && send()}
+            disabled={solved}
+          />
+          <button className="btn-gold" style={{ ...styles.btnPrimary, padding: "10px 18px" }} onClick={send} disabled={solved || loading}>→</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AGENTX ENIGMA PLAYER (wrapper shown in PlayerGameView) ──────────────────
+function AgentXEnigmaPlayer({ game, enigma, onComplete }) {
+  const secretCode = enigma.agentXSecretCode || "";
+  const [phase, setPhase] = useState("chat");   // "chat" | "enter-code"
+  const [codeInput, setCodeInput] = useState("");
+  const [codeError, setCodeError] = useState("");
+  const [chatSolved, setChatSolved] = useState(false);
+
+  const checkCode = () => {
+    if (codeInput.trim().toUpperCase() === secretCode.trim().toUpperCase()) {
+      onComplete();
+    } else {
+      setCodeError("Codice errato. Chiedi ad AgentX il codice corretto.");
+    }
+  };
+
+  return (
+    <div style={{ ...styles.card, marginBottom: "20px", border: "1px solid rgba(201,168,76,0.4)", padding: 0, overflow: "hidden" }}>
+      {/* Chat AgentX */}
+      <AgentXEnigmaChat
+        game={game}
+        enigma={enigma}
+        onSolved={() => setChatSolved(true)}
+      />
+
+      {/* Code entry section — always visible */}
+      <div style={{ padding: "16px 20px", borderTop: `1px solid ${G.border}`, background: "rgba(0,0,0,0.3)" }}>
+        <label style={{ ...styles.label, marginBottom: "8px" }}>
+          {chatSolved ? "🔑 Inserisci il codice segreto per proseguire" : "🔒 In attesa del codice segreto da AgentX…"}
+        </label>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <input
+            style={{ ...styles.input, flex: 1, fontFamily: G.fontMono, letterSpacing: "3px", fontSize: "18px", textTransform: "uppercase", opacity: chatSolved ? 1 : 0.4 }}
+            value={codeInput}
+            onChange={e => { setCodeInput(e.target.value); setCodeError(""); }}
+            placeholder="CODICE-SEGRETO"
+            onKeyDown={e => e.key === "Enter" && chatSolved && checkCode()}
+            disabled={!chatSolved}
+          />
+          <button
+            className="btn-gold"
+            style={{ ...styles.btnPrimary, padding: "10px 20px", opacity: chatSolved ? 1 : 0.4 }}
+            onClick={checkCode}
+            disabled={!chatSolved}
+          >
+            SBLOCCA →
+          </button>
+        </div>
+        {codeError && <p style={{ color: G.red, fontFamily: G.fontMono, fontSize: "13px", marginTop: "8px" }}>{codeError}</p>}
+      </div>
+    </div>
   );
 }
 
@@ -6077,6 +6402,29 @@ function PlayerGameView({ game, onBack }) {
                 }}
               />
             </div>
+          ) : enigma.type === "agentx-enigma" ? (
+            <>
+              <div style={{ ...styles.card, marginBottom: "16px", padding: "12px 18px", display: "flex", alignItems: "center", gap: "12px", background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.3)" }}>
+                <h2 style={{ ...styles.title, fontSize: "20px", margin: 0, flex: 1 }}>{enigma.title}</h2>
+                <span style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.gold, letterSpacing: "2px", background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: "4px", padding: "3px 10px" }}>
+                  🤖 ENIGMA AGENTX
+                </span>
+              </div>
+              <AgentXEnigmaPlayer
+                game={game}
+                enigma={enigma}
+                onComplete={() => {
+                  const elapsed = enigmaStartTime ? Math.floor((Date.now() - enigmaStartTime) / 1000) : 0;
+                  const score = Math.max(1, 10 - Math.floor(elapsed / 60));
+                  const entry = { idx: enigmaIdx, title: enigma.title || "Enigma AgentX", score, elapsed, expired: false };
+                  const newScores = [...scores, entry];
+                  setScores(newScores);
+                  saveScore(newScores);
+                  if (isLast) setPhase("complete");
+                  else { setEnigmaIdx(idx => idx + 1); setPhase("post"); }
+                }}
+              />
+            </>
           ) : (
             <>
               <div style={{ ...styles.card, marginBottom: "20px" }}>
@@ -6142,7 +6490,7 @@ function PlayerGameView({ game, onBack }) {
             </>
           )}
         </div>
-        {enigma.type !== "video-challenge" && agentOpen && <AgentXChat game={game} currentEnigma={enigma} onClose={() => setAgentOpen(false)} onUserMessage={handleAgentXMessage} />}
+        {enigma.type !== "video-challenge" && enigma.type !== "agentx-enigma" && agentOpen && <AgentXChat game={game} currentEnigma={enigma} onClose={() => setAgentOpen(false)} onUserMessage={handleAgentXMessage} />}
       </div>
     );
   }

@@ -4,11 +4,13 @@
     { "src": "index.html", "use": "@vercel/static" },
     { "src": "*.html", "use": "@vercel/static" },
     { "src": "api/claude.js", "use": "@vercel/node" },
-    { "src": "api/store.js", "use": "@vercel/node" }
+    { "src": "api/store.js", "use": "@vercel/node" },
+    { "src": "api/openai.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/claude", "dest": "/api/claude.js" },
     { "src": "/api/store", "dest": "/api/store.js" },
+    { "src": "/api/openai", "dest": "/api/openai.js" },
     { "src": "/puzzle\\.html", "dest": "/puzzle.html" },
     { "src": "/(.*)\\.html", "dest": "/$1.html" },
     { "src": "/(.*)", "dest": "/index.html" }

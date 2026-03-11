@@ -5828,22 +5828,35 @@ function PlayerGameView({ game, onBack }) {
         let freshEnigmas = game.enigmas;
         try {
           const res = await storage.get("escape_games");
+          console.log("[GEO DEBUG] storage res:", res);
           if (res?.value) {
             const allGames = JSON.parse(res.value);
             const fresh = allGames.find(g => g.id === game.id);
+            console.log("[GEO DEBUG] fresh game:", fresh?.id, "enigmas count:", fresh?.enigmas?.length);
             if (fresh?.enigmas) freshEnigmas = fresh.enigmas;
+            const nx = freshEnigmas[enigmaIdx + 1];
+            console.log("[GEO DEBUG] next enigma:", nx?.title, "lat:", nx?.lat, "lng:", nx?.lng);
+          } else {
+            console.log("[GEO DEBUG] storage returned null/empty — falling back to game.enigmas");
+            console.log("[GEO DEBUG] game.enigmas next:", game.enigmas[enigmaIdx+1]?.title, "lat:", game.enigmas[enigmaIdx+1]?.lat);
           }
-        } catch {}
+        } catch(e) {
+          console.error("[GEO DEBUG] storage error:", e);
+        }
 
         const next = freshEnigmas[enigmaIdx + 1];
         const tLat = next ? parseFloat(next.lat) : NaN;
         const tLng = next ? parseFloat(next.lng) : NaN;
 
+        console.log("[GEO DEBUG] enigmaIdx:", enigmaIdx, "next:", next?.title, "tLat:", tLat, "tLng:", tLng);
+
         if (!next || !next.lat || !next.lat.trim() || isNaN(tLat) || isNaN(tLng)) {
+          console.log("[GEO DEBUG] no valid coords → setFreshNextCoords(false)");
+          setFreshNextCoords(false); // false = no geo required
           stopGeo(); return;
         }
 
-        // Aggiorna il pulsante con le coordinate fresche
+        console.log("[GEO DEBUG] setting freshNextCoords:", tLat, tLng);
         setFreshNextCoords({ lat: tLat, lng: tLng });
 
         stopGeo();
@@ -6616,13 +6629,20 @@ function PlayerGameView({ game, onBack }) {
 
             if (freshNextCoords === null) {
               return (
-                <div style={{ textAlign: "center", color: G.muted, fontFamily: G.fontMono, fontSize: "12px", padding: "24px" }}>
-                  ⏳ Verifica posizione…
+                <div style={{ background: "#1a0a2e", border: "1px solid #ff00ff", borderRadius: "8px",
+                  padding: "16px", margin: "8px 0", fontFamily: "monospace", fontSize: "11px",
+                  color: "#ff00ff", lineHeight: "2" }}>
+                  <div>⏳ Lettura storage…</div>
+                  <div>enigmaIdx: {enigmaIdx}</div>
+                  <div>game.id: {game.id}</div>
+                  <div>game.enigmas[next]: {game.enigmas[enigmaIdx+1]?.title || "—"}</div>
+                  <div>game lat/lng: "{game.enigmas[enigmaIdx+1]?.lat}" / "{game.enigmas[enigmaIdx+1]?.lng}"</div>
                 </div>
               );
             }
 
-            if (!nextHasGeo) {
+            // false = storage letto ma nessuna geo → bottone libero
+            if (freshNextCoords === false || !nextHasGeo) {
               return (
                 <div style={{ textAlign: "center" }}>
                   <button className="btn-gold" style={{ ...styles.btnPrimary, padding: "16px 48px", fontSize: "18px" }} onClick={nextEnigma}>
@@ -6633,6 +6653,8 @@ function PlayerGameView({ game, onBack }) {
             }
 
             const confirmed = distance !== null && distance <= GEO_RADIUS;
+            // DEBUG — rimuovere dopo verifica
+            const _dbg = `freshNextCoords: ${JSON.stringify(freshNextCoords)} | distance: ${distance} | confirmed: ${confirmed}`;
 
             return (
               <div style={{
@@ -6646,6 +6668,11 @@ function PlayerGameView({ game, onBack }) {
                     <div style={{ fontSize: "40px", marginBottom: "10px", animation: "spin 3s linear infinite", display: "inline-block" }}>🧭</div>
                     <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.gold, letterSpacing: "3px", marginBottom: "8px" }}>
                       RAGGIUNGI IL PROSSIMO PUNTO
+                    </div>
+                    <div style={{ fontFamily: "monospace", fontSize: "10px", color: "#ff00ff",
+                      background: "#1a0a2e", borderRadius: "6px", padding: "8px 12px", marginBottom: "12px",
+                      border: "1px solid #ff00ff" }}>
+                      {_dbg}
                     </div>
                     <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted, lineHeight: "1.9", marginBottom: "16px" }}>
                       {distance === null

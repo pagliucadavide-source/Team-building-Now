@@ -2279,6 +2279,8 @@ function AdminGameEditor({ game, onSave, onBack }) {
       saveTimer.current = setTimeout(async () => {
         try {
           await storage.set(`draft:${next.id}`, JSON.stringify(next));
+          // Salva anche in escape_games così il giocatore vede sempre dati aggiornati
+          onSave(next);
           setLastSaved(new Date());
         } catch {}
       }, 800);
@@ -6568,22 +6570,7 @@ function PlayerGameView({ game, onBack }) {
             <div style={{ marginBottom: "20px" }}><YouTubePlayer url={enigma.postYoutube} autoplay /></div>
           )}
 
-          {/* ── DEBUG PANEL — rimuovere dopo test ── */}
-          <div style={{ background: "#1a0a2e", border: "1px solid #ff00ff", borderRadius: "8px",
-            padding: "12px 16px", marginBottom: "16px", fontFamily: "monospace", fontSize: "11px",
-            color: "#ff00ff", lineHeight: "2" }}>
-            <div>🔍 DEBUG GEO</div>
-            <div>enigmaIdx: {enigmaIdx}</div>
-            <div>enigma.title: {enigma?.title}</div>
-            <div>enigma.lat: "{enigma?.lat}" | enigma.lng: "{enigma?.lng}"</div>
-            <div>next title: {game.enigmas[enigmaIdx+1]?.title || "—"}</div>
-            <div>next.lat: "{game.enigmas[enigmaIdx+1]?.lat}" | next.lng: "{game.enigmas[enigmaIdx+1]?.lng}"</div>
-            <div>distance: {distance === null ? "null" : distance + "m"}</div>
-            <div>confirmed: {String(distance !== null && distance <= GEO_RADIUS)}</div>
-            <div>isLast: {String(isLast)}</div>
-          </div>
-          {/* ── END DEBUG ── */}
-                    {/* ── Prossima destinazione GPS — rimossa: gestita nel blocco RAGGIUNGI IL PROSSIMO PUNTO sotto ── */}
+          {/* ── Prossima destinazione GPS — rimossa: gestita nel blocco RAGGIUNGI IL PROSSIMO PUNTO sotto ── */}
           {/* ── NAVIGAZIONE POST-ENIGMA ─────────────────────────────────────────
                Regola:
                - isLast → "COMPLETA MISSIONE" sempre visibile

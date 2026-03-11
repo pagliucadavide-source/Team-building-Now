@@ -2279,7 +2279,7 @@ function AdminGameEditor({ game, onSave, onBack }) {
       saveTimer.current = setTimeout(async () => {
         try {
           await storage.set(`draft:${next.id}`, JSON.stringify(next));
-          // Salva anche in escape_games così il giocatore vede sempre dati aggiornati
+          // Salva sempre anche in escape_games — il giocatore legge da lì
           onSave(next);
           setLastSaved(new Date());
         } catch {}

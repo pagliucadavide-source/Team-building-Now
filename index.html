@@ -2317,20 +2317,7 @@ function AdminGameEditor({ game, onSave, onBack }) {
             </span>
           )}
           <button className="btn-gold" style={styles.btnPrimary} onClick={handleSave}>💾 Salva</button>
-          <button style={{ fontFamily: G.fontMono, fontSize: "11px", padding: "8px 16px",
-            background: "rgba(255,0,255,0.1)", border: "1px solid #ff00ff", color: "#ff00ff",
-            borderRadius: "6px", cursor: "pointer" }}
-            onClick={() => {
-              const info = g.enigmas.map((e,i) =>
-                `[${i}] ${e.title}\n` +
-                Object.entries(e)
-                  .filter(([k,v]) => typeof v === "string" && (k.toLowerCase().includes("lat") || k.toLowerCase().includes("lng") || k.toLowerCase().includes("lon") || k.toLowerCase().includes("geo") || k.toLowerCase().includes("coord")))
-                  .map(([k,v]) => `  ${k}: "${v}"`)
-                  .join("\n") +
-                `\n  TUTTI I CAMPI: ${Object.keys(e).join(", ")}`
-              ).join("\n\n");
-              alert(info || "nessun dato");
-            }}>🔍 DEBUG</button>
+
         </div>
       </div>
       <div style={{ ...styles.card, marginBottom: "20px" }}>
@@ -5727,9 +5714,11 @@ function PlayerGameView({ game, onBack }) {
 
   const getCoords = useCallback(() => {
     const e = enigmaRef.current;
-    if (!e?.lat || !e?.lng) return null;
-    const lat = parseFloat(e.lat);
-    const lng = parseFloat(e.lng);
+    const rawLat = e?.lat || e?.postLat;
+    const rawLng = e?.lng || e?.postLng;
+    if (!rawLat || !rawLng) return null;
+    const lat = parseFloat(rawLat);
+    const lng = parseFloat(rawLng);
     if (isNaN(lat) || isNaN(lng)) return null;
     return { lat, lng };
   }, []);
@@ -5842,35 +5831,27 @@ function PlayerGameView({ game, onBack }) {
         let freshEnigmas = game.enigmas;
         try {
           const res = await storage.get("escape_games");
-          console.log("[GEO DEBUG] storage res:", res);
           if (res?.value) {
             const allGames = JSON.parse(res.value);
             const fresh = allGames.find(g => g.id === game.id);
-            console.log("[GEO DEBUG] fresh game:", fresh?.id, "enigmas count:", fresh?.enigmas?.length);
             if (fresh?.enigmas) freshEnigmas = fresh.enigmas;
             const nx = freshEnigmas[enigmaIdx + 1];
-            console.log("[GEO DEBUG] next enigma:", nx?.title, "lat:", nx?.lat, "lng:", nx?.lng);
           } else {
-            console.log("[GEO DEBUG] storage returned null/empty — falling back to game.enigmas");
-            console.log("[GEO DEBUG] game.enigmas next:", game.enigmas[enigmaIdx+1]?.title, "lat:", game.enigmas[enigmaIdx+1]?.lat);
           }
         } catch(e) {
-          console.error("[GEO DEBUG] storage error:", e);
         }
 
         const next = freshEnigmas[enigmaIdx + 1];
-        const tLat = next ? parseFloat(next.lat) : NaN;
-        const tLng = next ? parseFloat(next.lng) : NaN;
+        const rawLat = next?.lat || next?.postLat;
+        const rawLng = next?.lng || next?.postLng;
+        const tLat = rawLat ? parseFloat(rawLat) : NaN;
+        const tLng = rawLng ? parseFloat(rawLng) : NaN;
 
-        console.log("[GEO DEBUG] enigmaIdx:", enigmaIdx, "next:", next?.title, "tLat:", tLat, "tLng:", tLng);
-
-        if (!next || !next.lat || !next.lat.trim() || isNaN(tLat) || isNaN(tLng)) {
-          console.log("[GEO DEBUG] no valid coords → setFreshNextCoords(false)");
-          setFreshNextCoords(false); // false = no geo required
+        if (!next || !rawLat || !rawLat.trim() || isNaN(tLat) || isNaN(tLng)) {
+          setFreshNextCoords(false);
           stopGeo(); return;
         }
 
-        console.log("[GEO DEBUG] setting freshNextCoords:", tLat, tLng);
         setFreshNextCoords({ lat: tLat, lng: tLng });
 
         stopGeo();
@@ -6659,16 +6640,7 @@ function PlayerGameView({ game, onBack }) {
             if (freshNextCoords === false || !nextHasGeo) {
               return (
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ background: "#1a0a2e", border: "1px solid #ff00ff", borderRadius: "8px",
-                    padding: "12px", margin: "0 0 16px 0", fontFamily: "monospace", fontSize: "10px",
-                    color: "#ff00ff", lineHeight: "1.8", textAlign: "left" }}>
-                    <div>⚠️ NESSUNA GEO TROVATA</div>
-                    <div>enigmaIdx: {enigmaIdx}</div>
-                    <div>freshNextCoords: {JSON.stringify(freshNextCoords)}</div>
-                    <div>game.next.lat: "{game.enigmas[enigmaIdx+1]?.lat}"</div>
-                    <div>game.next.lng: "{game.enigmas[enigmaIdx+1]?.lng}"</div>
-                    <div>game.next.title: "{game.enigmas[enigmaIdx+1]?.title}"</div>
-                  </div>
+
                   <button className="btn-gold" style={{ ...styles.btnPrimary, padding: "16px 48px", fontSize: "18px" }} onClick={nextEnigma}>
                     → PROSSIMO ENIGMA
                   </button>

@@ -6649,8 +6649,6 @@ function PlayerGameView({ game, onBack }) {
             }
 
             const confirmed = distance !== null && distance <= GEO_RADIUS;
-            // DEBUG — rimuovere dopo verifica
-            const _dbg = `freshNextCoords: ${JSON.stringify(freshNextCoords)} | distance: ${distance} | confirmed: ${confirmed}`;
 
             return (
               <div style={{
@@ -6664,11 +6662,6 @@ function PlayerGameView({ game, onBack }) {
                     <div style={{ fontSize: "40px", marginBottom: "10px", animation: "spin 3s linear infinite", display: "inline-block" }}>🧭</div>
                     <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.gold, letterSpacing: "3px", marginBottom: "8px" }}>
                       RAGGIUNGI IL PROSSIMO PUNTO
-                    </div>
-                    <div style={{ fontFamily: "monospace", fontSize: "10px", color: "#ff00ff",
-                      background: "#1a0a2e", borderRadius: "6px", padding: "8px 12px", marginBottom: "12px",
-                      border: "1px solid #ff00ff" }}>
-                      {_dbg}
                     </div>
                     <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted, lineHeight: "1.9", marginBottom: "16px" }}>
                       {distance === null

@@ -6623,17 +6623,7 @@ function PlayerGameView({ game, onBack }) {
             const nextHasGeo = freshNextCoords !== null && freshNextCoords !== false && nextLat && nextLng;
 
             if (freshNextCoords === null) {
-              return (
-                <div style={{ background: "#1a0a2e", border: "1px solid #ff00ff", borderRadius: "8px",
-                  padding: "16px", margin: "8px 0", fontFamily: "monospace", fontSize: "11px",
-                  color: "#ff00ff", lineHeight: "2" }}>
-                  <div>⏳ Lettura storage…</div>
-                  <div>enigmaIdx: {enigmaIdx}</div>
-                  <div>game.id: {game.id}</div>
-                  <div>game.enigmas[next]: {game.enigmas[enigmaIdx+1]?.title || "—"}</div>
-                  <div>game lat/lng: "{game.enigmas[enigmaIdx+1]?.lat}" / "{game.enigmas[enigmaIdx+1]?.lng}"</div>
-                </div>
-              );
+              return <div style={{ minHeight: "60px" }} />;
             }
 
             // false = storage letto ma nessuna geo

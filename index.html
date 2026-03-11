@@ -5714,11 +5714,10 @@ function PlayerGameView({ game, onBack }) {
 
   const getCoords = useCallback(() => {
     const e = enigmaRef.current;
-    const rawLat = e?.lat || e?.postLat;
-    const rawLng = e?.lng || e?.postLng;
-    if (!rawLat || !rawLng) return null;
-    const lat = parseFloat(rawLat);
-    const lng = parseFloat(rawLng);
+    // Solo lat/lng blocca l'accesso all'enigma — postLat/postLng è la destinazione successiva
+    if (!e?.lat || !e?.lng) return null;
+    const lat = parseFloat(e.lat);
+    const lng = parseFloat(e.lng);
     if (isNaN(lat) || isNaN(lng)) return null;
     return { lat, lng };
   }, []);
@@ -5841,13 +5840,14 @@ function PlayerGameView({ game, onBack }) {
         } catch(e) {
         }
 
-        const next = freshEnigmas[enigmaIdx + 1];
-        const rawLat = next?.lat || next?.postLat;
-        const rawLng = next?.lng || next?.postLng;
+        // Usa postLat/postLng dell'enigma CORRENTE come destinazione post-risoluzione
+        const current = freshEnigmas[enigmaIdx];
+        const rawLat = current?.postLat || current?.lat;
+        const rawLng = current?.postLng || current?.lng;
         const tLat = rawLat ? parseFloat(rawLat) : NaN;
         const tLng = rawLng ? parseFloat(rawLng) : NaN;
 
-        if (!next || !rawLat || !rawLat.trim() || isNaN(tLat) || isNaN(tLng)) {
+        if (!current || !rawLat || !rawLat.trim() || isNaN(tLat) || isNaN(tLng)) {
           setFreshNextCoords(false);
           stopGeo(); return;
         }
@@ -6616,11 +6616,11 @@ function PlayerGameView({ game, onBack }) {
               );
             }
 
-            // Coordinate rilette da storage in fase post (freshNextCoords)
-            // null = ancora in caricamento | false-y = nessuna geo
+            // freshNextCoords = postLat/postLng dell'enigma corrente riletti da storage
+            // null = caricamento | false = nessuna geo → pulsante libero
             const nextLat = freshNextCoords?.lat;
             const nextLng = freshNextCoords?.lng;
-            const nextHasGeo = freshNextCoords !== null && nextLat && nextLng;
+            const nextHasGeo = freshNextCoords !== null && freshNextCoords !== false && nextLat && nextLng;
 
             if (freshNextCoords === null) {
               return (

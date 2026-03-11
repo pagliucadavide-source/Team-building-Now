@@ -6641,10 +6641,20 @@ function PlayerGameView({ game, onBack }) {
               );
             }
 
-            // false = storage letto ma nessuna geo → bottone libero
+            // false = storage letto ma nessuna geo
             if (freshNextCoords === false || !nextHasGeo) {
               return (
                 <div style={{ textAlign: "center" }}>
+                  <div style={{ background: "#1a0a2e", border: "1px solid #ff00ff", borderRadius: "8px",
+                    padding: "12px", margin: "0 0 16px 0", fontFamily: "monospace", fontSize: "10px",
+                    color: "#ff00ff", lineHeight: "1.8", textAlign: "left" }}>
+                    <div>⚠️ NESSUNA GEO TROVATA</div>
+                    <div>enigmaIdx: {enigmaIdx}</div>
+                    <div>freshNextCoords: {JSON.stringify(freshNextCoords)}</div>
+                    <div>game.next.lat: "{game.enigmas[enigmaIdx+1]?.lat}"</div>
+                    <div>game.next.lng: "{game.enigmas[enigmaIdx+1]?.lng}"</div>
+                    <div>game.next.title: "{game.enigmas[enigmaIdx+1]?.title}"</div>
+                  </div>
                   <button className="btn-gold" style={{ ...styles.btnPrimary, padding: "16px 48px", fontSize: "18px" }} onClick={nextEnigma}>
                     → PROSSIMO ENIGMA
                   </button>

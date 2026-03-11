@@ -2322,9 +2322,14 @@ function AdminGameEditor({ game, onSave, onBack }) {
             borderRadius: "6px", cursor: "pointer" }}
             onClick={() => {
               const info = g.enigmas.map((e,i) =>
-                `[${i}] ${e.title}\nlat: "${e.lat}"\nlng: "${e.lng}"`
+                `[${i}] ${e.title}\n` +
+                Object.entries(e)
+                  .filter(([k,v]) => typeof v === "string" && (k.toLowerCase().includes("lat") || k.toLowerCase().includes("lng") || k.toLowerCase().includes("lon") || k.toLowerCase().includes("geo") || k.toLowerCase().includes("coord")))
+                  .map(([k,v]) => `  ${k}: "${v}"`)
+                  .join("\n") +
+                `\n  TUTTI I CAMPI: ${Object.keys(e).join(", ")}`
               ).join("\n\n");
-              alert("ENIGMI - LAT/LNG:\n\n" + info);
+              alert(info || "nessun dato");
             }}>🔍 DEBUG</button>
         </div>
       </div>

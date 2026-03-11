@@ -6569,8 +6569,18 @@ function PlayerGameView({ game, onBack }) {
           )}
 
           {/* ── Prossima destinazione GPS — rimossa: gestita nel blocco RAGGIUNGI IL PROSSIMO PUNTO sotto ── */}
-          {/* Bottone PROSSIMO ENIGMA / COMPLETA MISSIONE */}
+          {/* ── NAVIGAZIONE POST-ENIGMA ─────────────────────────────────────────
+               Regola:
+               - isLast → "COMPLETA MISSIONE" sempre visibile
+               - next enigma senza lat/lng → "PROSSIMO ENIGMA" visibile subito
+               - next enigma CON lat/lng → BLOCCA il pulsante, mostra radar.
+                 Il pulsante "SBLOCCA" appare SOLO quando il watchPosition
+                 della fase post ha confermato distance <= GEO_RADIUS.
+                 distance viene azzerato a null all'entrata in fase "post"
+                 quindi non può mai essere <= GEO_RADIUS per errore.
+          ── */}
           {(() => {
+            // ULTIMO ENIGMA: completa sempre
             if (isLast) {
               return (
                 <div style={{ textAlign: "center" }}>
@@ -6580,13 +6590,18 @@ function PlayerGameView({ game, onBack }) {
                 </div>
               );
             }
-            const next = game.enigmas[enigmaIdx + 1];
-            const nextHasGeo = next && next.lat && next.lng &&
-              !isNaN(parseFloat(next.lat)) && !isNaN(parseFloat(next.lng));
-            const geoRequired = nextHasGeo;
 
-            if (!geoRequired) {
-              // Nessuna geo sul prossimo enigma — bottone immediato
+            const next = game.enigmas[enigmaIdx + 1];
+
+            // Controlla se il prossimo enigma ha coordinate GPS valide
+            const nextLat = next && parseFloat(next.lat);
+            const nextLng = next && parseFloat(next.lng);
+            const nextHasGeo = next && next.lat && next.lat.trim() !== "" &&
+                               next.lng && next.lng.trim() !== "" &&
+                               !isNaN(nextLat) && !isNaN(nextLng);
+
+            // NESSUNA GEO sul prossimo → bottone libero
+            if (!nextHasGeo) {
               return (
                 <div style={{ textAlign: "center" }}>
                   <button className="btn-gold" style={{ ...styles.btnPrimary, padding: "16px 48px", fontSize: "18px" }} onClick={nextEnigma}>
@@ -6596,67 +6611,66 @@ function PlayerGameView({ game, onBack }) {
               );
             }
 
-            // Il prossimo enigma è geolocalizzato
-            const mapsLat = next.lat;
-            const mapsLng = next.lng;
-            const inRange = distance !== null && distance <= GEO_RADIUS;
+            // GEO RICHIESTA sul prossimo enigma
+            // distance è null fino a quando watchPosition non manda una lettura reale
+            // (viene azzerato a null ogni volta che si entra in fase "post")
+            const confirmed = distance !== null && distance <= GEO_RADIUS;
 
             return (
               <div style={{
-                textAlign: "center",
-                padding: "24px 20px",
-                background: inRange ? "rgba(46,213,115,0.06)" : "rgba(201,168,76,0.06)",
-                border: `1px solid ${inRange ? "rgba(46,213,115,0.4)" : "rgba(201,168,76,0.25)"}`,
-                borderRadius: "12px",
-                marginTop: "8px",
-                transition: "all 0.4s ease"
+                textAlign: "center", padding: "28px 20px",
+                background: confirmed ? "rgba(46,213,115,0.07)" : "rgba(201,168,76,0.05)",
+                border: `1px solid ${confirmed ? "rgba(46,213,115,0.45)" : "rgba(201,168,76,0.2)"}`,
+                borderRadius: "14px", marginTop: "8px", transition: "all 0.5s ease"
               }}>
-                {!inRange ? (
+                {!confirmed ? (
                   <>
-                    <div style={{ fontSize: "36px", marginBottom: "10px", animation: "spin 4s linear infinite", display: "inline-block" }}>🧭</div>
+                    <div style={{ fontSize: "40px", marginBottom: "10px", animation: "spin 3s linear infinite", display: "inline-block" }}>🧭</div>
                     <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.gold, letterSpacing: "3px", marginBottom: "8px" }}>
                       RAGGIUNGI IL PROSSIMO PUNTO
                     </div>
-                    <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted, letterSpacing: "1px", lineHeight: "1.8", marginBottom: "16px" }}>
-                      Avvicinati entro {GEO_RADIUS}m per sbloccare il prossimo enigma
+                    <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted, lineHeight: "1.9", marginBottom: "16px" }}>
+                      {distance === null
+                        ? "Acquisizione segnale GPS…"
+                        : `Avvicinati entro ${GEO_RADIUS}m — sei ancora lontano`}
                     </div>
                   </>
                 ) : (
                   <>
-                    <div style={{ fontSize: "36px", marginBottom: "10px" }}>✅</div>
+                    <div style={{ fontSize: "40px", marginBottom: "8px" }}>✅</div>
                     <div style={{ fontFamily: G.fontMono, fontSize: "13px", color: G.success, letterSpacing: "2px", marginBottom: "12px" }}>
-                      SEI IN ZONA!
+                      SEI IN ZONA — PUOI PROCEDERE
                     </div>
                   </>
                 )}
 
-                {/* Distanza live */}
+                {/* Badge distanza — solo se GPS ha già una lettura */}
                 {distance !== null && (
-                  <div style={{ display: "inline-block", background: G.bg3, border: `1px solid ${G.border}`, borderRadius: "40px", padding: "10px 28px", marginBottom: "16px" }}>
-                    <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.muted, letterSpacing: "2px", marginBottom: "2px" }}>DISTANZA</div>
-                    <div style={{ fontFamily: G.fontMono, fontSize: "26px", fontWeight: "bold",
-                      color: distance > 200 ? G.red : distance > GEO_RADIUS ? "#e0a020" : G.success }}>
-                      {distance > 999 ? `${(distance / 1000).toFixed(1)} km` : `${distance} m`}
+                  <div style={{ display: "inline-block", background: G.bg3, border: `1px solid ${G.border}`, borderRadius: "40px", padding: "8px 24px", marginBottom: "16px" }}>
+                    <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.muted, letterSpacing: "2px", marginBottom: "2px" }}>DISTANZA</div>
+                    <div style={{ fontFamily: G.fontMono, fontSize: "24px", fontWeight: "bold",
+                      color: distance > 300 ? G.red : distance > GEO_RADIUS ? "#e0a020" : G.success }}>
+                      {distance > 999 ? `${(distance/1000).toFixed(1)} km` : `${distance} m`}
                     </div>
                   </div>
                 )}
 
                 <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
-                  {/* Pulsante SBLOCCA — appare solo quando si è in zona */}
-                  {inRange && (
+                  {/* SBLOCCA — visibile SOLO quando GPS conferma vicinanza */}
+                  {confirmed && (
                     <button
                       className="btn-gold"
-                      style={{ ...styles.btnPrimary, padding: "14px 36px", fontSize: "16px", background: "linear-gradient(135deg, #2ed573, #27ae60)", borderColor: "#2ed573", animation: "pulse 1.5s ease infinite" }}
+                      style={{ ...styles.btnPrimary, padding: "14px 36px", fontSize: "16px",
+                        background: "linear-gradient(135deg,#2ed573,#27ae60)", borderColor: "#2ed573" }}
                       onClick={nextEnigma}
                     >
                       🔓 SBLOCCA ENIGMA
                     </button>
                   )}
-                  {/* Maps — sempre visibile */}
-                  <a href={`https://maps.google.com/?q=${mapsLat},${mapsLng}`}
+                  <a href={`https://maps.google.com/?q=${nextLat},${nextLng}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="btn-gold"
-                    style={{ ...styles.btn, display: "inline-block", textDecoration: "none", padding: "10px 20px", fontSize: "12px", color: G.gold, borderColor: G.gold }}>
+                    style={{ ...styles.btn, display: "inline-flex", alignItems: "center", textDecoration: "none",
+                      padding: "10px 18px", fontSize: "12px", color: G.gold, borderColor: G.gold }}>
                     🗺 APRI SU MAPS
                   </a>
                 </div>

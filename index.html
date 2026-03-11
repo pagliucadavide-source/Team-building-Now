@@ -6244,9 +6244,9 @@ function PlayerGameView({ game, onBack }) {
 
   // ─ ENIGMA ─
   if (phase === "enigma") {
-    // Enigma is accessible when: no coords set, geo error, OR player has reached the spot
+    // Enigma accessible ONLY when: no coords configured, OR explicitly unlocked (arrived or admin code)
     const coords = getCoords();
-    const enigmaAccessible = !coords || geoStatus === "error" || geoStatus === "nocoords" || unlockedState;
+    const enigmaAccessible = !coords || geoStatus === "nocoords" || unlockedState;
 
     // ── WAITING SCREEN: GPS coords set but player hasn't arrived yet ──
     if (coords && !unlockedState) {
@@ -6388,12 +6388,7 @@ function PlayerGameView({ game, onBack }) {
             </div>
           )}
 
-          {/* Geo error notice */}
-          {geoStatus === "error" && (
-            <div style={{ ...styles.card, marginBottom: "16px", padding: "10px 16px", textAlign: "center", color: G.muted, fontSize: "13px" }}>
-              ⚠️ GPS non disponibile — enigma accessibile senza verifica posizione
-            </div>
-          )}
+
 
           {enigma.type === "video-challenge" ? (
             <div style={{ ...styles.card, marginBottom: "20px", border: "1px solid rgba(192,57,43,0.3)" }}>

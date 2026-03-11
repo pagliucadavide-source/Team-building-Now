@@ -5901,6 +5901,7 @@ function PlayerGameView({ game, onBack }) {
       } catch {}
 
       setPhase("post");
+      setDistance(null); // reset distance so post-phase geo starts fresh
       setError("");
     } else {
       setError("Risposta errata. Continua a cercare…");
@@ -6420,7 +6421,7 @@ function PlayerGameView({ game, onBack }) {
                   const newScores = [...scores, entry];
                   setScores(newScores);
                   if (isLast) setPhase("complete");
-                  else { setEnigmaIdx(idx => idx + 1); setPhase("post"); }
+                  else { setEnigmaIdx(idx => idx + 1); setPhase("post"); setDistance(null); }
                 }}
               />
             </div>
@@ -6443,7 +6444,7 @@ function PlayerGameView({ game, onBack }) {
                   setScores(newScores);
                   saveScore(newScores);
                   if (isLast) setPhase("complete");
-                  else { setEnigmaIdx(idx => idx + 1); setPhase("post"); }
+                  else { setEnigmaIdx(idx => idx + 1); setPhase("post"); setDistance(null); }
                 }}
               />
             </>

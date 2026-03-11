@@ -2317,6 +2317,15 @@ function AdminGameEditor({ game, onSave, onBack }) {
             </span>
           )}
           <button className="btn-gold" style={styles.btnPrimary} onClick={handleSave}>💾 Salva</button>
+          <button style={{ fontFamily: G.fontMono, fontSize: "11px", padding: "8px 16px",
+            background: "rgba(255,0,255,0.1)", border: "1px solid #ff00ff", color: "#ff00ff",
+            borderRadius: "6px", cursor: "pointer" }}
+            onClick={() => {
+              const info = g.enigmas.map((e,i) =>
+                `[${i}] ${e.title}\nlat: "${e.lat}"\nlng: "${e.lng}"`
+              ).join("\n\n");
+              alert("ENIGMI - LAT/LNG:\n\n" + info);
+            }}>🔍 DEBUG</button>
         </div>
       </div>
       <div style={{ ...styles.card, marginBottom: "20px" }}>

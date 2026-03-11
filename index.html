@@ -5666,6 +5666,7 @@ function PlayerGameView({ game, onBack }) {
   const [error, setError] = useState("");
   const [geoStatus, setGeoStatus] = useState("idle");
   const [distance, setDistance] = useState(null);
+  const [freshNextCoords, setFreshNextCoords] = useState(null);
   const [agentOpen, setAgentOpen] = useState(false);
   const [enigmaStartTime, setEnigmaStartTime] = useState(null);
   const [timerExpired,    setTimerExpired]    = useState(false);
@@ -5820,39 +5821,52 @@ function PlayerGameView({ game, onBack }) {
     // ── PHASE "post": track the NEXT enigma's geo so player auto-advances ──
     if (phase === "post") {
       if (isLast) { stopGeo(); return; }
-      const next = game.enigmas[enigmaIdx + 1];
-      if (!next?.lat || !next?.lng || isNaN(parseFloat(next.lat)) || isNaN(parseFloat(next.lng))) {
-        stopGeo(); return;
-      }
-      // Start watching for the next enigma coords
-      stopGeo();
-      if (!navigator.geolocation) return;
-      const tLat = parseFloat(next.lat);
-      const tLng = parseFloat(next.lng);
-      const onNextPos = (pos) => {
-        const d = Math.round(haversine(pos.coords.latitude, pos.coords.longitude, tLat, tLng));
-        setDistance(d);
-        if (d <= GEO_RADIUS) {
-          stopGeo();
-          // Auto-advance to next enigma
-          setEnigmaIdx(i => i + 1);
-          setPhase("enigma");
-          setAnswer(""); setError("");
-          setEnigmaStartTime(null); setTimerExpired(false);
-        }
-      };
-      try {
-        watchIdRef.current = navigator.geolocation.watchPosition(
-          onNextPos, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
-        );
-      } catch {}
-      pollRef.current = setInterval(() => {
+
+      // Rilegge il game aggiornato dallo storage per avere lat/lng freschi
+      // (il giocatore potrebbe aver caricato i dati prima che l'admin salvasse le coordinate)
+      (async () => {
+        let freshEnigmas = game.enigmas;
         try {
-          navigator.geolocation.getCurrentPosition(
-            onNextPos, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+          const res = await storage.get("escape_games");
+          if (res?.value) {
+            const allGames = JSON.parse(res.value);
+            const fresh = allGames.find(g => g.id === game.id);
+            if (fresh?.enigmas) freshEnigmas = fresh.enigmas;
+          }
+        } catch {}
+
+        const next = freshEnigmas[enigmaIdx + 1];
+        const tLat = next ? parseFloat(next.lat) : NaN;
+        const tLng = next ? parseFloat(next.lng) : NaN;
+
+        if (!next || !next.lat || !next.lat.trim() || isNaN(tLat) || isNaN(tLng)) {
+          stopGeo(); return;
+        }
+
+        // Aggiorna il pulsante con le coordinate fresche
+        setFreshNextCoords({ lat: tLat, lng: tLng });
+
+        stopGeo();
+        if (!navigator.geolocation) return;
+
+        const onNextPos = (pos) => {
+          const d = Math.round(haversine(pos.coords.latitude, pos.coords.longitude, tLat, tLng));
+          setDistance(d);
+        };
+        try {
+          watchIdRef.current = navigator.geolocation.watchPosition(
+            onNextPos, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
           );
         } catch {}
-      }, 8000);
+        pollRef.current = setInterval(() => {
+          try {
+            navigator.geolocation.getCurrentPosition(
+              onNextPos, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+            );
+          } catch {}
+        }, 8000);
+      })();
+
       return () => stopGeo();
     }
 
@@ -5903,7 +5917,8 @@ function PlayerGameView({ game, onBack }) {
       } catch {}
 
       setPhase("post");
-      setDistance(null); // reset distance so post-phase geo starts fresh
+      setDistance(null);
+      setFreshNextCoords(null);
       setError("");
     } else {
       setError("Risposta errata. Continua a cercare…");
@@ -6423,7 +6438,7 @@ function PlayerGameView({ game, onBack }) {
                   const newScores = [...scores, entry];
                   setScores(newScores);
                   if (isLast) setPhase("complete");
-                  else { setPhase("post"); setDistance(null); }
+                  else { setPhase("post"); setDistance(null); setFreshNextCoords(null); }
                 }}
               />
             </div>
@@ -6446,7 +6461,7 @@ function PlayerGameView({ game, onBack }) {
                   setScores(newScores);
                   saveScore(newScores);
                   if (isLast) setPhase("complete");
-                  else { setPhase("post"); setDistance(null); }
+                  else { setPhase("post"); setDistance(null); setFreshNextCoords(null); }
                 }}
               />
             </>
@@ -6593,16 +6608,20 @@ function PlayerGameView({ game, onBack }) {
               );
             }
 
-            const next = game.enigmas[enigmaIdx + 1];
+            // Coordinate rilette da storage in fase post (freshNextCoords)
+            // null = ancora in caricamento | false-y = nessuna geo
+            const nextLat = freshNextCoords?.lat;
+            const nextLng = freshNextCoords?.lng;
+            const nextHasGeo = freshNextCoords !== null && nextLat && nextLng;
 
-            // Controlla se il prossimo enigma ha coordinate GPS valide
-            const nextLat = next && parseFloat(next.lat);
-            const nextLng = next && parseFloat(next.lng);
-            const nextHasGeo = next && next.lat && next.lat.trim() !== "" &&
-                               next.lng && next.lng.trim() !== "" &&
-                               !isNaN(nextLat) && !isNaN(nextLng);
+            if (freshNextCoords === null) {
+              return (
+                <div style={{ textAlign: "center", color: G.muted, fontFamily: G.fontMono, fontSize: "12px", padding: "24px" }}>
+                  ⏳ Verifica posizione…
+                </div>
+              );
+            }
 
-            // NESSUNA GEO sul prossimo → bottone libero
             if (!nextHasGeo) {
               return (
                 <div style={{ textAlign: "center" }}>
@@ -6613,9 +6632,6 @@ function PlayerGameView({ game, onBack }) {
               );
             }
 
-            // GEO RICHIESTA sul prossimo enigma
-            // distance è null fino a quando watchPosition non manda una lettura reale
-            // (viene azzerato a null ogni volta che si entra in fase "post")
             const confirmed = distance !== null && distance <= GEO_RADIUS;
 
             return (

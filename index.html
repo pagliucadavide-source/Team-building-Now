@@ -3536,6 +3536,7 @@ Sei il PROTAGONISTA di questo enigma. Il tuo compito è:
       if (reply.includes(`*${secretCode}*`) || reply.includes(secretCode)) {
         setRevealedCode(secretCode);
         setSolved(true);
+        onSolved?.();
       }
     } catch (err) {
       setMsgs(prev => [...prev, { role: "assistant", text: `[AgentX] Errore: ${err.message}` }]);

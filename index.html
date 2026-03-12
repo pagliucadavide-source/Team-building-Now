@@ -2300,10 +2300,6 @@ function AdminGameEditor({ game, onSave, onAutoSave, onBack }) {
         <button className="btn-outline" style={styles.btn} onClick={onBack}>← Partite</button>
         <h2 style={{ ...styles.title, fontSize: "22px", margin: 0, flex: 1 }}>Modifica Partita</h2>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          }>
-              ✓ salvato alle {lastSaved.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-            </span>
-          )}
           <button className="btn-gold" style={styles.btnPrimary} onClick={handleSave}>💾 Salva</button>
 
         </div>

@@ -3324,17 +3324,13 @@ function ScoreboardPanel({ games }) {
   );
 }
 
-function AdminDashboard({ games, adminPassword, onEdit, onPreview, onNewGame, onNewGameFromTemplate, onDeleteGame, onChangePassword, onBack }) {
+function AdminDashboard({ games, adminPassword, onEdit, onNewGame, onNewGameFromTemplate, onDeleteGame, onChangePassword, onBack }) {
   const [newPwd, setNewPwd] = useState("");
   const [pwdMsg, setPwdMsg] = useState("");
   const [reportTarget, setReportTarget] = useState(null);
   const [templates, setTemplates] = useState([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [templateMsg, setTemplateMsg] = useState("");
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [leaderboardData, setLeaderboardData] = useState([]);
-  const [lbLoading, setLbLoading] = useState(false);
-  const [eventDuration, setEventDuration] = useState(120);
 
   // Carica templates da storage al mount
   useEffect(() => {
@@ -3372,49 +3368,6 @@ function AdminDashboard({ games, adminPassword, onEdit, onPreview, onNewGame, on
     const updated = templates.filter(t => t.id !== id);
     setTemplates(updated);
     try { await storage.set("nexus_templates", JSON.stringify(updated)); } catch {}
-  };
-
-  const loadLeaderboard = async () => {
-    setLbLoading(true);
-    try {
-      const res = await storage.list("scores:");
-      const entries = [];
-      if (res?.keys) {
-        for (const key of res.keys) {
-          try {
-            const r = await storage.get(key);
-            if (r?.value) entries.push(JSON.parse(r.value));
-          } catch {}
-        }
-      }
-      entries.sort((a, b) => (b.total || 0) - (a.total || 0));
-      setLeaderboardData(entries);
-    } catch {}
-    setLbLoading(false);
-  };
-
-  const startEvent = async (gameId) => {
-    try { await storage.set(`event_start:${gameId}`, String(Date.now())); } catch {}
-  };
-
-  const stopEvent = async (gameId) => {
-    try { await storage.set(`event_start:${gameId}`, "0"); } catch {}
-  };
-
-  const exportCSV = () => {
-    if (!leaderboardData.length) return;
-    const rows = [["Giocatore","Codice","Partita","Punteggio","Enigmi","Completato il"]];
-    leaderboardData.forEach(d => rows.push([
-      d.playerName||"—", d.playerCode||"—", d.gameName||"—",
-      d.total||0, (d.scores||[]).length,
-      d.completedAt ? new Date(d.completedAt).toLocaleString("it-IT") : "—"
-    ]));
-    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-    const a = Object.assign(document.createElement("a"), {
-      href: URL.createObjectURL(new Blob(["\uFEFF"+csv], {type:"text/csv"})),
-      download: `nexus_${new Date().toISOString().slice(0,10)}.csv`
-    });
-    a.click();
   };
 
   const createFromTemplate = (template) => {
@@ -3469,10 +3422,6 @@ function AdminDashboard({ games, adminPassword, onEdit, onPreview, onNewGame, on
         <button className="btn-outline" style={{ ...styles.btn, padding: "10px 20px" }} onClick={() => setShowTemplates(v => !v)}>
           📁 {showTemplates ? "NASCONDI TEMPLATE" : `TEMPLATE SALVATI (${templates.length})`}
         </button>
-        <button className="btn-outline" style={{ ...styles.btn, padding: "10px 20px", color: "#3498db", borderColor: "#3498db" }}
-          onClick={() => { setShowLeaderboard(v => !v); if (!showLeaderboard) loadLeaderboard(); }}>
-          🏆 {showLeaderboard ? "NASCONDI CLASSIFICA" : "CLASSIFICA LIVE"}
-        </button>
       </div>
 
       {/* Template message */}
@@ -3516,65 +3465,6 @@ function AdminDashboard({ games, adminPassword, onEdit, onPreview, onNewGame, on
         </div>
       )}
 
-      {showLeaderboard && (
-        <div style={{ ...styles.card, marginBottom: "24px", border: "1px solid rgba(52,152,219,0.3)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
-            <h3 style={{ ...styles.title, fontSize: "15px", margin: 0, flex: 1 }}>🏆 CLASSIFICA LIVE</h3>
-            <button className="btn-outline" style={{ ...styles.btn, padding: "7px 14px", fontSize: "11px" }}
-              onClick={loadLeaderboard} disabled={lbLoading}>
-              {lbLoading ? "⏳..." : "🔄 Aggiorna"}
-            </button>
-            <button className="btn-outline" style={{ ...styles.btn, padding: "7px 14px", fontSize: "11px", color: "#2ecc71", borderColor: "#2ecc71" }}
-              onClick={exportCSV} disabled={!leaderboardData.length}>
-              📥 CSV
-            </button>
-          </div>
-          <div style={{ marginBottom: "14px", padding: "10px 12px", background: "rgba(52,152,219,0.05)", borderRadius: "8px" }}>
-            <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: "#3498db", marginBottom: "8px", letterSpacing: "2px" }}>⚙️ CONTROLLI EVENTO</div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <select value={eventDuration} onChange={e => setEventDuration(Number(e.target.value))}
-                style={{ background: G.bg3, border: `1px solid ${G.border}`, color: G.text,
-                  fontFamily: G.fontMono, fontSize: "12px", padding: "6px 10px", borderRadius: "6px" }}>
-                <option value={60}>1 ora</option>
-                <option value={90}>1h 30m</option>
-                <option value={120}>2 ore</option>
-                <option value={180}>3 ore</option>
-              </select>
-              {games.map(g => (
-                <div key={g.id} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                  <span style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.muted }}>{g.name}:</span>
-                  <button style={{ padding: "5px 12px", borderRadius: "5px", border: "none", cursor: "pointer",
-                    fontFamily: G.fontMono, fontSize: "10px", background: "#2ecc71", color: "#000" }}
-                    onClick={() => startEvent(g.id)}>▶ Avvia</button>
-                  <button style={{ padding: "5px 12px", borderRadius: "5px", border: "none", cursor: "pointer",
-                    fontFamily: G.fontMono, fontSize: "10px", background: "#e74c3c", color: "#fff" }}
-                    onClick={() => stopEvent(g.id)}>⏹ Stop</button>
-                </div>
-              ))}
-            </div>
-          </div>
-          {leaderboardData.length === 0 ? (
-            <div style={{ textAlign: "center", fontFamily: G.fontMono, fontSize: "12px", color: G.muted, padding: "20px" }}>
-              Nessun punteggio. Clicca 🔄 Aggiorna.
-            </div>
-          ) : leaderboardData.map((d, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px",
-              padding: "10px 12px", marginBottom: "6px", borderRadius: "8px",
-              background: i === 0 ? "rgba(201,168,76,0.1)" : "rgba(255,255,255,0.02)",
-              border: i === 0 ? `1px solid rgba(201,168,76,0.3)` : `1px solid ${G.border}` }}>
-              <div style={{ fontFamily: G.fontMono, fontSize: "16px", width: "28px", textAlign: "center" }}>
-                {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i+1}.`}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: G.fontMono, fontSize: "13px", color: G.text }}>{d.playerName || d.playerCode}</div>
-                <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.muted }}>{d.gameName} · {(d.scores||[]).length} enigmi</div>
-              </div>
-              <div style={{ fontFamily: G.fontMono, fontSize: "18px", color: G.gold, fontWeight: "bold" }}>{d.total || 0}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
       <div style={{ ...styles.card, marginBottom: "28px" }}>
         <h3 style={{ ...styles.title, fontSize: "15px", marginBottom: "16px" }}>🔒 CAMBIA PASSWORD</h3>
         <div style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
@@ -3604,7 +3494,6 @@ function AdminDashboard({ games, adminPassword, onEdit, onPreview, onNewGame, on
             </div>
             <div style={{ display: "flex", gap: "10px" }}>
               <button className="btn-outline" style={{ ...styles.btn, padding: "6px 16px", fontSize: "12px" }} onClick={() => onEdit(g)}>✏️ Modifica</button>
-              <button className="btn-outline" style={{ ...styles.btn, padding: "6px 16px", fontSize: "12px", color: "#2ecc71", borderColor: "#2ecc71" }} onClick={() => onPreview(g)}>👁 Anteprima</button>
               <button className="btn-outline" style={{ ...styles.btn, padding: "6px 16px", fontSize: "12px", color: G.gold, borderColor: G.gold }} onClick={() => saveTemplate(g)}>📋 Template</button>
               <button className="btn-danger" style={styles.btnDanger} onClick={() => onDeleteGame(g.id)}>🗑️</button>
             </div>
@@ -5857,7 +5746,7 @@ function ZoomableImage({ src, alt }) {
   );
 }
 
-function PlayerGameView({ game, onBack, gpsOverride = false }) {
+function PlayerGameView({ game, onBack }) {
   // game may have _playerName and _playerCode injected at login
   const playerName = game._playerName || "Giocatore";
   const playerCode = game._playerCode || "?";
@@ -5869,12 +5758,6 @@ function PlayerGameView({ game, onBack, gpsOverride = false }) {
   const [geoStatus, setGeoStatus] = useState("idle");
   const [distance, setDistance] = useState(null);
   const [freshNextCoords, setFreshNextCoords] = useState(null);
-  const [teamNotification, setTeamNotification] = useState("");
-  const [hintPenalty, setHintPenalty] = useState(0);
-  const [usedHints, setUsedHints] = useState([]);
-  const [showHintConfirm, setShowHintConfirm] = useState(false);
-  const [eventStart, setEventStart] = useState(null);
-  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
   const [agentOpen, setAgentOpen] = useState(false);
   const [enigmaStartTime, setEnigmaStartTime] = useState(null);
   const [timerExpired,    setTimerExpired]    = useState(false);
@@ -5919,29 +5802,6 @@ function PlayerGameView({ game, onBack, gpsOverride = false }) {
   const enigmaRef = useRef(enigma);
   useEffect(() => { enigmaRef.current = enigma; }, [enigma]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await storage.get(`event_start:${game.id}`);
-        if (res?.value && res.value !== "0") setEventStart(parseInt(res.value, 10));
-      } catch {}
-    })();
-    const t = setInterval(async () => {
-      try {
-        const res = await storage.get(`event_start:${game.id}`);
-        if (res?.value && res.value !== "0") setEventStart(parseInt(res.value, 10));
-        else setEventStart(null);
-      } catch {}
-    }, 30000);
-    return () => clearInterval(t);
-  }, []);
-
-  useEffect(() => {
-    if (!eventStart) return;
-    const t = setInterval(forceUpdate, 1000);
-    return () => clearInterval(t);
-  }, [eventStart]);
-
   // ── Ripristina progresso al login ─────────────────────────────────────────
   // Se il giocatore (o un compagno) aveva già risolto enigmi, riparte da lì
   useEffect(() => {
@@ -5959,7 +5819,6 @@ function PlayerGameView({ game, onBack, gpsOverride = false }) {
   }, []); // solo al mount
 
   const getCoords = useCallback(() => {
-    if (gpsOverride) return null;
     const e = enigmaRef.current;
     // Solo lat/lng blocca l'accesso all'enigma — postLat/postLng è la destinazione successiva
     if (!e?.lat || !e?.lng) return null;
@@ -6089,7 +5948,6 @@ function PlayerGameView({ game, onBack, gpsOverride = false }) {
 
         // Usa postLat/postLng dell'enigma CORRENTE come destinazione post-risoluzione
         const current = freshEnigmas[enigmaIdx];
-        if (gpsOverride) { setFreshNextCoords(false); return; }
         const rawLat = current?.postLat || current?.lat;
         const rawLng = current?.postLng || current?.lng;
         const tLat = rawLat ? parseFloat(rawLat) : NaN;
@@ -6172,8 +6030,6 @@ function PlayerGameView({ game, onBack, gpsOverride = false }) {
           setGeoStatus("idle");
           unlockedRef.current = false;
           setUnlockedState(false);
-          setTeamNotification("🎉 Il tuo team ha risolto questo enigma! Avanzate insieme.");
-          setTimeout(() => setTeamNotification(""), 5000);
         }
       } catch {}
     }, 5000); // controlla ogni 5 secondi
@@ -6184,10 +6040,8 @@ function PlayerGameView({ game, onBack, gpsOverride = false }) {
     if (answer.trim().toLowerCase() === (enigma.answer || "").trim().toLowerCase()) {
       // Calculate score
       const elapsed = enigmaStartTime ? Math.floor((Date.now() - enigmaStartTime) / 1000) : ENIGMA_DURATION;
-      const baseScore = calcEnigmaScore(elapsed, timerExpired);
-      const score = Math.max(0, baseScore - hintPenalty);
-      const entry = { idx: enigmaIdx, title: enigma.title || `Enigma ${enigmaIdx + 1}`, score, elapsed, expired: timerExpired, hintsUsed: usedHints.length };
-      setHintPenalty(0); setUsedHints([]); setShowHintConfirm(false);
+      const score   = calcEnigmaScore(elapsed, timerExpired);
+      const entry   = { idx: enigmaIdx, title: enigma.title || `Enigma ${enigmaIdx + 1}`, score, elapsed, expired: timerExpired };
       const newScores = [...scores, entry];
       setScores(newScores);
 
@@ -6227,7 +6081,6 @@ function PlayerGameView({ game, onBack, gpsOverride = false }) {
       setEnigmaIdx((i) => i + 1);
       setPhase("enigma");
       setAnswer(""); setError("");
-      setUsedHints([]); setHintPenalty(0); setShowHintConfirm(false);
       // Aggiorna progresso condiviso
       try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
       setEnigmaStartTime(null); setTimerExpired(false);
@@ -6447,37 +6300,7 @@ function PlayerGameView({ game, onBack, gpsOverride = false }) {
   if (phase === "intro") {
     return (
       <div style={{ minHeight: "100vh", padding: "40px 20px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        {eventStart && (() => {
-          const duration = (game.eventDuration || 120) * 60 * 1000;
-          const remaining = Math.max(0, duration - (Date.now() - eventStart));
-          const mins = Math.floor(remaining / 60000);
-          const secs = Math.floor((remaining % 60000) / 1000);
-          const pct = Math.min(100, (remaining / duration) * 100);
-          const col = pct > 50 ? G.gold : pct > 20 ? "#e67e22" : "#e74c3c";
-          return (
-            <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-              background: "rgba(10,10,15,0.95)", borderBottom: `2px solid ${col}`,
-              padding: "8px 16px", display: "flex", alignItems: "center", gap: "12px" }}>
-              <span style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted, letterSpacing: "2px" }}>⏱ TEMPO</span>
-              <span style={{ fontFamily: G.fontMono, fontSize: "20px", color: col, fontWeight: "bold" }}>
-                {String(mins).padStart(2,"0")}:{String(secs).padStart(2,"0")}
-              </span>
-              <div style={{ flex: 1, height: "4px", background: "rgba(255,255,255,0.1)", borderRadius: "2px" }}>
-                <div style={{ width: `${pct}%`, height: "100%", background: col, borderRadius: "2px" }} />
-              </div>
-            </div>
-          );
-        })()}
-        {teamNotification ? (
-          <div style={{ position: "fixed", top: eventStart ? "52px" : "12px", left: "50%",
-            transform: "translateX(-50%)", zIndex: 200,
-            background: "rgba(10,10,15,0.97)", border: `1px solid ${G.gold}`,
-            borderRadius: "12px", padding: "14px 24px", maxWidth: "340px", width: "90%",
-            textAlign: "center", boxShadow: `0 4px 24px rgba(201,168,76,0.3)` }}>
-            <div style={{ fontFamily: G.fontMono, fontSize: "13px", color: G.gold }}>{teamNotification}</div>
-          </div>
-        ) : null}
-        <div style={{ maxWidth: "700px", width: "100%", animation: "fadeInUp 0.7s ease", marginTop: eventStart ? "52px" : "0" }}>
+        <div style={{ maxWidth: "700px", width: "100%", animation: "fadeInUp 0.7s ease" }}>
           <div style={{ textAlign: "center", marginBottom: "40px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "20px", marginBottom: "20px", flexWrap: "wrap" }}>
               {game.clientLogo && (
@@ -6856,52 +6679,6 @@ function PlayerGameView({ game, onBack, gpsOverride = false }) {
                 <button className="btn-gold" style={{ ...styles.btnPrimary, width: "100%", padding: "14px" }} onClick={checkAnswer}>
                   VERIFICA RISPOSTA →
                 </button>
-                {(enigma.hints || []).filter(Boolean).length > 0 && (
-                  <div style={{ marginTop: "12px" }}>
-                    {usedHints.map((hi, i) => (
-                      <div key={i} style={{ ...styles.card, background: "rgba(201,168,76,0.05)",
-                        border: "1px solid rgba(201,168,76,0.2)", marginBottom: "8px", padding: "12px 16px" }}>
-                        <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.gold, letterSpacing: "2px", marginBottom: "6px" }}>💡 SUGGERIMENTO {i + 1}</div>
-                        <div style={{ fontSize: "15px", color: G.text }}>{(enigma.hints || []).filter(Boolean)[hi]}</div>
-                      </div>
-                    ))}
-                    {usedHints.length < (enigma.hints || []).filter(Boolean).length && (
-                      <button style={{ width: "100%", padding: "12px", marginTop: "4px",
-                        background: "rgba(231,76,60,0.08)", border: "2px solid rgba(231,76,60,0.5)",
-                        borderRadius: "8px", cursor: "pointer", fontFamily: G.fontMono,
-                        fontSize: "12px", color: "#e74c3c" }}
-                        onClick={() => setShowHintConfirm(true)}>
-                        💡 CHIEDI SUGGERIMENTO — costa 2 punti
-                        <span style={{ display: "block", fontSize: "10px", opacity: 0.7, marginTop: "3px" }}>
-                          ({usedHints.length + 1} di {(enigma.hints || []).filter(Boolean).length} disponibili)
-                        </span>
-                      </button>
-                    )}
-                    {usedHints.length >= (enigma.hints || []).filter(Boolean).length && (
-                      <div style={{ textAlign: "center", fontFamily: G.fontMono, fontSize: "11px", color: G.muted, padding: "8px" }}>Tutti i suggerimenti usati</div>
-                    )}
-                  </div>
-                )}
-                {showHintConfirm && (
-                  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)",
-                    display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999 }}>
-                    <div style={{ ...styles.card, maxWidth: "320px", width: "90%", textAlign: "center", padding: "28px 24px" }}>
-                      <div style={{ fontSize: "36px", marginBottom: "12px" }}>💡</div>
-                      <div style={{ fontFamily: G.fontMono, fontSize: "13px", color: G.gold, marginBottom: "8px" }}>SUGGERIMENTO {usedHints.length + 1}</div>
-                      <div style={{ fontSize: "14px", color: G.muted, marginBottom: "20px", lineHeight: "1.6" }}>
-                        Usare questo suggerimento costerà <strong style={{ color: "#e74c3c" }}>2 punti</strong>. Vuoi continuare?
-                      </div>
-                      <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-                        <button className="btn-outline" style={{ ...styles.btn, padding: "10px 20px" }} onClick={() => setShowHintConfirm(false)}>Annulla</button>
-                        <button style={{ padding: "10px 20px", background: "#e74c3c", border: "none",
-                          borderRadius: "6px", color: "#fff", fontFamily: G.fontMono, fontSize: "12px", cursor: "pointer" }}
-                          onClick={() => { setUsedHints(prev => [...prev, prev.length]); setShowHintConfirm(false); setHintPenalty(p => p + 2); }}>
-                          Sì, voglio il suggerimento
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </>
           )}
@@ -7085,7 +6862,6 @@ function App() {
   const [games, setGames] = useState([]);
   const [editingGame, setEditingGame] = useState(null);
   const [playerGame, setPlayerGame] = useState(null);
-  const [previewGame, setPreviewGame] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [muted, setMuted] = useState(false);
 
@@ -7217,7 +6993,6 @@ function App() {
             games={games}
             adminPassword={adminPassword}
             onEdit={(g) => { setEditingGame(games.find(x => x.id === g.id) || g); setView("admin-game"); }}
-            onPreview={(g) => { setPreviewGame({...g, _playerName:"PREVIEW", _playerCode:"preview", _gpsOverride:true}); setView("admin-preview"); }}
             onNewGame={async () => { const g = EMPTY_GAME(); const ng = [...games, g]; await saveGames(ng); setEditingGame(g); setView("admin-game"); }}
             onNewGameFromTemplate={async (g) => { const ng = [...games, g]; await saveGames(ng); setEditingGame(g); setView("admin-game"); }}
             onDeleteGame={async (id) => {
@@ -7261,50 +7036,12 @@ function App() {
           onBack={() => { setPlayerGame(null); setView("home"); }}
         />
       )}
-      {view === "admin-preview" && previewGame && (
-        <div>
-          <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999,
-            background: "rgba(231,76,60,0.95)", padding: "8px 16px",
-            display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontFamily: "monospace", fontSize: "12px", color: "#fff", letterSpacing: "1px" }}>
-              👁 MODALITÀ ANTEPRIMA — GPS DISABILITATO
-            </span>
-            <button onClick={() => { setPreviewGame(null); setView("admin-dashboard"); }}
-              style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.4)",
-                color: "#fff", fontFamily: "monospace", fontSize: "11px",
-                padding: "4px 12px", borderRadius: "4px", cursor: "pointer" }}>
-              ✕ ESCI
-            </button>
-          </div>
-          <div style={{ paddingTop: "40px" }}>
-            <PlayerGameView game={previewGame} gpsOverride={true}
-              onBack={() => { setPreviewGame(null); setView("admin-dashboard"); }} />
-          </div>
-        </div>
-      )}
     </div>
     </MuteContext.Provider>
   );
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    const sw = `
-const CACHE='nexus-v1';
-self.addEventListener('install',e=>{self.skipWaiting();});
-self.addEventListener('activate',e=>{self.clients.claim();});
-self.addEventListener('fetch',e=>{
-  if(e.request.method!=='GET')return;
-  if(e.request.url.includes('/api/'))return;
-  e.respondWith(caches.open(CACHE).then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(res=>{c.put(e.request,res.clone());return res;}))));
-});`;
-    const blob = new Blob([sw], {type:'application/javascript'});
-    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
-  });
-}
 </script>
 </body>
 </html>

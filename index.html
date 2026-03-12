@@ -6010,8 +6010,10 @@ function PlayerGameView({ game, onBack }) {
   }, [phase, enigmaIdx]);
 
   // ── Polling progresso condiviso ──────────────────────────────────────────
-  // Se un compagno di squadra ha risolto l'enigma con lo stesso codice,
-  // questo dispositivo avanza automaticamente alla stessa posizione
+  // Usa ref per leggere sempre il valore aggiornato di enigmaIdx nel callback
+  const enigmaIdxRef = useRef(enigmaIdx);
+  useEffect(() => { enigmaIdxRef.current = enigmaIdx; }, [enigmaIdx]);
+
   useEffect(() => {
     if (phase === "complete" || phase === "cinematic" || phase === "intro") return;
     const progressKey = `progress:${game.id}:${playerCode}`;
@@ -6020,9 +6022,9 @@ function PlayerGameView({ game, onBack }) {
         const res = await storage.get(progressKey);
         if (!res?.value) return;
         const remoteIdx = parseInt(res.value, 10);
-        if (isNaN(remoteIdx)) return;
-        // Avanza solo se il progresso remoto è maggiore di quello locale
-        if (remoteIdx > enigmaIdx) {
+        if (isNaN(remoteIdx) || remoteIdx <= 0) return;
+        // Avanza solo se il progresso remoto è strettamente maggiore
+        if (remoteIdx > enigmaIdxRef.current) {
           setEnigmaIdx(remoteIdx);
           setPhase("enigma");
           setAnswer(""); setError("");
@@ -6032,9 +6034,9 @@ function PlayerGameView({ game, onBack }) {
           setUnlockedState(false);
         }
       } catch {}
-    }, 5000); // controlla ogni 5 secondi
+    }, 8000); // controlla ogni 8 secondi
     return () => clearInterval(poll);
-  }, [phase, enigmaIdx, playerCode, game.id]);
+  }, [phase, playerCode, game.id]);
 
   const checkAnswer = async () => {
     if (answer.trim().toLowerCase() === (enigma.answer || "").trim().toLowerCase()) {

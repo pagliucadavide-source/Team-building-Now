@@ -6466,7 +6466,7 @@ function PlayerGameView({ game, onBack }) {
                   if (isLast) setPhase("complete");
                   else {
                     setPhase("post"); setDistance(null); setFreshNextCoords(null);
-                    try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
+                    storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)).catch(() => {});
                   }
                 }}
               />
@@ -6492,7 +6492,7 @@ function PlayerGameView({ game, onBack }) {
                   if (isLast) setPhase("complete");
                   else {
                     setPhase("post"); setDistance(null); setFreshNextCoords(null);
-                    try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
+                    storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)).catch(() => {});
                   }
                 }}
               />

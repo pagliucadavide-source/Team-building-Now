@@ -5697,6 +5697,22 @@ function PlayerGameView({ game, onBack }) {
   const enigmaRef = useRef(enigma);
   useEffect(() => { enigmaRef.current = enigma; }, [enigma]);
 
+  // ── Ripristina progresso al login ─────────────────────────────────────────
+  // Se il giocatore (o un compagno) aveva già risolto enigmi, riparte da lì
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await storage.get(`progress:${game.id}:${playerCode}`);
+        if (!res?.value) return;
+        const savedIdx = parseInt(res.value, 10);
+        if (!isNaN(savedIdx) && savedIdx > 0 && savedIdx < game.enigmas.length) {
+          setEnigmaIdx(savedIdx);
+          setPhase("enigma");
+        }
+      } catch {}
+    })();
+  }, []); // solo al mount
+
   const getCoords = useCallback(() => {
     const e = enigmaRef.current;
     // Solo lat/lng blocca l'accesso all'enigma — postLat/postLng è la destinazione successiva

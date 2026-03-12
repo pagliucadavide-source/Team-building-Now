@@ -2254,8 +2254,6 @@ function EnigmaPreviewModal({ enigma, index, total, game, onPrev, onNext, onClos
 
 function AdminGameEditor({ game, onSave, onAutoSave, onBack }) {
   const [g, setG] = useState(game);
-  const [lastSaved, setLastSaved] = useState(null);
-  const saveTimer = useRef(null);
   const [previewIdx, setPreviewIdx] = useState(null); // index of enigma being previewed
 
   // On mount: load latest draft from storage (survives re-renders & artifact reloads)
@@ -2275,15 +2273,6 @@ function AdminGameEditor({ game, onSave, onAutoSave, onBack }) {
   const updateG = (updater) => {
     setG(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
-      clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(async () => {
-        try {
-          await storage.set(`draft:${next.id}`, JSON.stringify(next));
-          // Salva in escape_games senza redirect
-          if (onAutoSave) onAutoSave(next);
-          setLastSaved(new Date());
-        } catch {}
-      }, 800);
       return next;
     });
   };
@@ -2311,8 +2300,7 @@ function AdminGameEditor({ game, onSave, onAutoSave, onBack }) {
         <button className="btn-outline" style={styles.btn} onClick={onBack}>← Partite</button>
         <h2 style={{ ...styles.title, fontSize: "22px", margin: 0, flex: 1 }}>Modifica Partita</h2>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {lastSaved && (
-            <span style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.success, letterSpacing: "1px", display: "flex", alignItems: "center", gap: "5px" }}>
+          }>
               ✓ salvato alle {lastSaved.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </span>
           )}

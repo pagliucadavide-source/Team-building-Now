@@ -2252,7 +2252,7 @@ function EnigmaPreviewModal({ enigma, index, total, game, onPrev, onNext, onClos
 }
 
 
-function AdminGameEditor({ game, onSave, onBack }) {
+function AdminGameEditor({ game, onSave, onAutoSave, onBack }) {
   const [g, setG] = useState(game);
   const [lastSaved, setLastSaved] = useState(null);
   const saveTimer = useRef(null);
@@ -2279,8 +2279,8 @@ function AdminGameEditor({ game, onSave, onBack }) {
       saveTimer.current = setTimeout(async () => {
         try {
           await storage.set(`draft:${next.id}`, JSON.stringify(next));
-          // Salva sempre anche in escape_games — il giocatore legge da lì
-          onSave(next);
+          // Salva in escape_games senza redirect
+          if (onAutoSave) onAutoSave(next);
           setLastSaved(new Date());
         } catch {}
       }, 800);
@@ -6869,6 +6869,7 @@ function App() {
         <div style={{ padding: "20px 0" }}>
           <AdminGameEditor
             game={editingGame}
+            onAutoSave={(g) => { const ng = games.map((x) => (x.id === g.id ? g : x)); saveGames(ng); }}
             onSave={(g) => { const ng = games.map((x) => (x.id === g.id ? g : x)); saveGames(ng); setEditingGame(g); setView("admin-dashboard"); }}
             onBack={() => setView("admin-dashboard")}
           />

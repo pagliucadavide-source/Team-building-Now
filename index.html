@@ -5995,34 +5995,7 @@ function PlayerGameView({ game, onBack }) {
     return () => stopGeo();
   }, [phase, enigmaIdx]);
 
-  // ── Polling progresso condiviso ──────────────────────────────────────────
-  // Usa ref per leggere sempre il valore aggiornato di enigmaIdx nel callback
-  const enigmaIdxRef = useRef(enigmaIdx);
-  useEffect(() => { enigmaIdxRef.current = enigmaIdx; }, [enigmaIdx]);
 
-  useEffect(() => {
-    if (phase === "complete" || phase === "cinematic" || phase === "intro") return;
-    const progressKey = `progress:${game.id}:${playerCode}`;
-    const poll = setInterval(async () => {
-      try {
-        const res = await storage.get(progressKey);
-        if (!res?.value) return;
-        const remoteIdx = parseInt(res.value, 10);
-        if (isNaN(remoteIdx) || remoteIdx <= 0) return;
-        // Avanza solo se il progresso remoto è strettamente maggiore
-        if (remoteIdx > enigmaIdxRef.current) {
-          setEnigmaIdx(remoteIdx);
-          setPhase("enigma");
-          setAnswer(""); setError("");
-          setDistance(null); setFreshNextCoords(null);
-          setGeoStatus("idle");
-          unlockedRef.current = false;
-          setUnlockedState(false);
-        }
-      } catch {}
-    }, 8000); // controlla ogni 8 secondi
-    return () => clearInterval(poll);
-  }, [phase, playerCode, game.id]);
 
   const checkAnswer = async () => {
     if (answer.trim().toLowerCase() === (enigma.answer || "").trim().toLowerCase()) {
@@ -6049,10 +6022,7 @@ function PlayerGameView({ game, onBack }) {
       setDistance(null);
       setFreshNextCoords(null);
       setError("");
-      // Salva progresso condiviso — altri dispositivi con lo stesso codice avanzeranno
-      try {
-        await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1));
-      } catch {}
+
     } else {
       setError("Risposta errata. Continua a cercare…");
     }
@@ -6069,8 +6039,7 @@ function PlayerGameView({ game, onBack }) {
       setEnigmaIdx((i) => i + 1);
       setPhase("enigma");
       setAnswer(""); setError("");
-      // Aggiorna progresso condiviso
-      try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
+
       setEnigmaStartTime(null); setTimerExpired(false);
     }
   };
@@ -6575,7 +6544,6 @@ function PlayerGameView({ game, onBack }) {
                   if (isLast) setPhase("complete");
                   else {
                     setPhase("post"); setDistance(null); setFreshNextCoords(null);
-                    storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)).catch(() => {});
                   }
                 }}
               />
@@ -6601,7 +6569,6 @@ function PlayerGameView({ game, onBack }) {
                   if (isLast) setPhase("complete");
                   else {
                     setPhase("post"); setDistance(null); setFreshNextCoords(null);
-                    storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)).catch(() => {});
                   }
                 }}
               />

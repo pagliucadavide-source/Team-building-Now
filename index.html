@@ -6689,12 +6689,13 @@ function PlayerGameView({ game, onBack }) {
                   className="btn-gold"
                   style={{ ...styles.btnPrimary, width: "100%", padding: "12px" }}
                   onClick={async () => {
-                    // Legge gli score già salvati (dal compagno) e li sincronizza localmente
+                    // Sincronizza scores dal compagno
+                    let syncedScores = scores;
                     try {
                       const sr = await storage.get(`scores:${game.id}:${playerCode}`);
                       if (sr?.value) {
                         const saved = JSON.parse(sr.value);
-                        if (saved.scores?.length) setScores(saved.scores);
+                        if (saved.scores?.length) { syncedScores = saved.scores; setScores(saved.scores); }
                       }
                     } catch {}
                     setTeamNotify(false);
@@ -6703,10 +6704,15 @@ function PlayerGameView({ game, onBack }) {
                     setUnlockedState(false);
                     setDistance(null);
                     setGeoStatus("idle");
-                    setEnigmaIdx(teamNotify);
-                    setPhase("enigma");
                     setAnswer(""); setError("");
                     setFreshNextCoords(null);
+                    // Se il compagno ha completato l'ultimo enigma → vai a complete
+                    if (teamNotify >= game.enigmas.length) {
+                      setPhase("complete");
+                    } else {
+                      setEnigmaIdx(teamNotify);
+                      setPhase("enigma");
+                    }
                   }}
                 >
                   → PROCEDI CON IL TEAM
@@ -6779,12 +6785,13 @@ function PlayerGameView({ game, onBack }) {
                 className="btn-gold"
                 style={{ ...styles.btnPrimary, width: "100%", padding: "12px" }}
                 onClick={async () => {
-                  // Legge gli score già salvati (dal compagno) e li sincronizza localmente
+                  // Sincronizza scores dal compagno
+                  let syncedScores = scores;
                   try {
                     const sr = await storage.get(`scores:${game.id}:${playerCode}`);
                     if (sr?.value) {
                       const saved = JSON.parse(sr.value);
-                      if (saved.scores?.length) setScores(saved.scores);
+                      if (saved.scores?.length) { syncedScores = saved.scores; setScores(saved.scores); }
                     }
                   } catch {}
                   setTeamNotify(false);
@@ -6793,10 +6800,15 @@ function PlayerGameView({ game, onBack }) {
                   setUnlockedState(false);
                   setDistance(null);
                   setGeoStatus("idle");
-                  setEnigmaIdx(teamNotify);
-                  setPhase("enigma");
                   setAnswer(""); setError("");
                   setFreshNextCoords(null);
+                  // Se il compagno ha completato l'ultimo enigma → vai a complete
+                  if (teamNotify >= game.enigmas.length) {
+                    setPhase("complete");
+                  } else {
+                    setEnigmaIdx(teamNotify);
+                    setPhase("enigma");
+                  }
                 }}
               >
                 → PROCEDI CON IL TEAM
@@ -6842,10 +6854,11 @@ function PlayerGameView({ game, onBack }) {
                   };
                   const newScores = [...scores, entry];
                   setScores(newScores);
+                  saveScore(newScores);
+                  try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
                   if (isLast) setPhase("complete");
                   else {
                     setPhase("post"); setDistance(null); setFreshNextCoords(null);
-                    storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)).catch(() => {});
                   }
                 }}
               />
@@ -6868,10 +6881,10 @@ function PlayerGameView({ game, onBack }) {
                   const newScores = [...scores, entry];
                   setScores(newScores);
                   saveScore(newScores);
+                  try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
                   if (isLast) setPhase("complete");
                   else {
                     setPhase("post"); setDistance(null); setFreshNextCoords(null);
-                    storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)).catch(() => {});
                   }
                 }}
               />

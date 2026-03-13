@@ -1627,11 +1627,7 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
         parsed = { punteggio: 7, obiettivo_raggiunto: true, feedback: raw, valutazione_obiettivi: "" };
       }
       setEvaluation(parsed);
-      if (!muted && parsed.feedback) {
-        const utt = new SpeechSynthesisUtterance(parsed.feedback);
-        utt.lang = "it-IT"; utt.rate = 0.95;
-        window.speechSynthesis.speak(utt);
-      }
+
       // Stop stream now that we have the result
       if (stream) stream.getTracks().forEach(t => t.stop());
       setStream(null);

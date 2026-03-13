@@ -1508,13 +1508,14 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
       ? "Criteri: " + enigma.aiEvalCriteria
       : "Valuta coinvolgimento, postura, espressione e approccio al problema.";
 
-    const prompt = "Sei un valutatore esperto di team building e formazione.\n" +
-      "Stai analizzando lo scatto n." + snapIndex + " di una sfida video.\n" +
-      "Giocatore: " + playerName + " — Team: " + gameName + "\n" +
-      "Sfida: " + (enigma.challenge || "Esercizio pratico") + "\n" +
+    const prompt = "Sei un Senior Learning & Development Consultant con 20 anni di esperienza in formazione aziendale, psicologia dei gruppi e assessment comportamentale. Hai certificazioni in Team Dynamics (metodo Belbin), Comunicazione Non Violenta, Coaching Sistemico e metodologie esperienziali (escape room formative, outdoor training, assessment center).\nIl tuo approccio è evidence-based (ogni osservazione deriva da comportamenti osservabili), bilanciato (punti di forza prima delle aree di sviluppo), azionabile (ogni feedback include azioni concrete) e sistemico (leggi il gruppo come sistema, non come somma di individui). Linguaggio professionale, mai giudicante.\n\n" +
+      "Stai analizzando lo SCATTO N." + snapIndex + " di una sfida video in tempo reale.\n" +
+      "Team: " + gameName + " | Partecipante ripresa: " + playerName + "\n" +
+      "Sfida assegnata: " + (enigma.challenge || "Esercizio pratico di gruppo") + "\n" +
       criteria + "\n\n" +
-      "Guarda attentamente l'immagine. Rispondi SOLO con JSON valido senza testo extra:\n" +
-      '{"punteggio":<intero 1-10>,"nota":"<osservazione 1-2 frasi>"}';
+      "Analizza l'immagine e osserva: postura e linguaggio del corpo, espressioni facciali, dinamiche spaziali del gruppo, livello di coinvolgimento, eventuali segnali di leadership o esclusione.\n" +
+      "Rispondi SOLO con JSON valido senza testo extra:\n" +
+      '{"punteggio":<intero 1-10>,"nota":"<osservazione comportamentale specifica 2-3 frasi, evidence-based>"}';
 
     try {
       const res = await fetch("/api/openai", {
@@ -1595,15 +1596,16 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
         "\n  Media visiva: " + snapAvg + "/10\n\n"
       : "";
 
-    const prompt = "Sei un valutatore esperto di team building e problem solving.\n" +
-      "Il team \"" + gameName + "\" (giocatore: " + playerName + ") ha completato una sfida video.\n\n" +
-      "SFIDA: \"" + (enigma.challenge || "Problem solving di gruppo") + "\"\n\n" +
+    const prompt = "Sei un Senior Learning & Development Consultant con 20 anni di esperienza in formazione aziendale, psicologia dei gruppi e assessment comportamentale. Hai certificazioni in Team Dynamics (metodo Belbin), Comunicazione Non Violenta, Coaching Sistemico e metodologie esperienziali. Il tuo approccio è evidence-based, bilanciato, azionabile e sistemico. Linguaggio professionale, mai giudicante.\n\n" +
+      "VALUTAZIONE SFIDA VIDEO\n" +
+      "Team: \"" + gameName + "\" | Partecipante: " + playerName + "\n" +
+      "Sfida: \"" + (enigma.challenge || "Problem solving di gruppo") + "\"\n\n" +
       snapSummary +
       criteria + "\n\n" +
-      "Rispondi SOLO con JSON valido senza testo fuori dal JSON:\n" +
+      "Produci una valutazione professionale. Rispondi SOLO con JSON valido senza testo fuori dal JSON:\n" +
       '{"punteggio":<intero 1-10>,"obiettivo_raggiunto":<true/false>,' +
-      '"feedback":"<3 frasi: punti forza, area miglioramento, consiglio pratico. Tono professionale. Italiano.>",' +
-      '"valutazione_obiettivi":"<3-4 frasi analisi obiettivi raggiunti. Dettagliata. Italiano.>",' +
+      '"feedback":"<Feedback formativo in 5-6 frasi: (1) apertura empatica sul contesto, (2) punti di forza osservati con esempi specifici, (3) dinamiche di gruppo rilevate, (4) area di miglioramento prioritaria con motivazione, (5) raccomandazione pratica concreta per il team. Tono da coach professionista. Italiano.>",' +
+      '"valutazione_obiettivi":"<Analisi approfondita in 4-5 frasi: valuta ogni obiettivo della sfida, descrivi come il team lo ha affrontato, identifica pattern comportamentali, collega la performance al potenziale di sviluppo del gruppo. Italiano.>",' +
       '"punteggio_visivo":' + (snapAvg !== null ? snapAvg : "null") + ',' +
       '"dettaglio_scatti":' + (snaps.length > 0 ? JSON.stringify(snaps) : "[]") + '}';
 
@@ -2524,37 +2526,59 @@ function FormativeReportModal({ scoreData, agentLogData, game, onClose }) {
       const gameName   = scoreData?.gameName   || agentLogData?.gameName   || game?.name || "—";
 
       // ── CALL 1: narrative report (unchanged original) ─────────────────
-      const prompt = `Sei un esperto di team building e sviluppo organizzativo. Hai supervisionato una sessione di escape game formativo chiamata "${gameName}" per il gruppo con codice "${playerCode}" (${playerName}).
+      const prompt = `Sei un Senior Learning & Development Consultant con 20 anni di esperienza in formazione aziendale, psicologia dei gruppi e assessment comportamentale. Hai certificazioni in Team Dynamics (metodo Belbin), Comunicazione Non Violenta, Coaching Sistemico e metodologie esperienziali (escape room formative, outdoor training, assessment center).
+Il tuo approccio è evidence-based (ogni osservazione deriva da dati concreti), bilanciato (punti di forza prima delle aree di sviluppo), azionabile (ogni feedback include azioni concrete e misurabili) e sistemico (leggi il gruppo come sistema, non come somma di individui).
 
-Ecco i dati raccolti durante la sessione:
+Hai appena supervisionato la sessione di escape game formativo "${gameName}" per il gruppo "${playerName}" (codice: ${playerCode}).
 
-PRESTAZIONI PER ENIGMA:
-${scoresText || "Nessun dato di punteggio disponibile"}
+════ DATI SESSIONE ════
 
-PUNTEGGIO TOTALE: ${totalScore} su ${maxScore} punti
+PERFORMANCE:
+${scoresText}
 
-DOMANDE E RICHIESTE DI AIUTO AD AGENTX (l'assistente IA durante il gioco):
-${agentQuestions || "Nessuna domanda posta ad AgentX"}
+PUNTEGGIO TOTALE: ${totalScore}/${maxScore} (${Math.round(totalScore/maxScore*100)}%)
+TEMPO MEDIO PER ENIGMA: ${Math.floor(avgTime/60)}:${String(avgTime%60).padStart(2,"0")}
+INTERAZIONI CON AGENTX (richieste di aiuto): ${totalAgentQuestions}
 
-In base a questi dati, scrivi un REPORT FORMATIVO in italiano. Il report deve:
-1. Avere un titolo e una valutazione generale del team (max 2 righe)
-2. Analizzare la COLLABORAZIONE: come si sono organizzati, divisione dei ruoli, sincronizzazione
-3. Analizzare la GESTIONE DEL TEMPO: velocità di risposta, pressione del timer, efficienza
-4. Analizzare la MODALITÀ DI PROBLEM SOLVING: approccio autonomo vs. richiesta di aiuto, tipo di domande fatte
-5. PUNTI DI FORZA del team (2-3 bullet)
-6. AREE DI MIGLIORAMENTO (2-3 bullet)
-7. RACCOMANDAZIONE FORMATIVA: un'attività o workshop specifico da suggerire per rafforzare le aree deboli
+DOMANDE AD AGENTX (indicatore di stile cognitivo e autonomia):
+${agentText}
 
-Tono: professionale ma accessibile. Lunghezza: 400-600 parole. Non inventare dati che non hai — se mancano informazioni, basati su ciò che hai.
+════ REPORT RICHIESTO ════
 
-${allSnapshots.length > 0 ? `
-ANALISI VISIVA — FOTO SFIDE VIDEO:
-Sono allegate ${allSnapshots.length} foto scattate durante le sfide video del team.
-Analizza ogni foto e includi nel report una sezione dedicata "ANALISI VISIVA DEL TEAM" con:
-- Postura del gruppo: coinvolgimento fisico, orientamento, energia corporea
-- Espressioni facciali: concentrazione, stress, entusiasmo, disorientamento
-- Dinamica di squadra: collaborazione visibile, chi guida, chi segue, isolamento
-- Evoluzione nel tempo: come cambia il gruppo tra il primo e l'ultimo scatto` : ""}`;
+Scrivi un REPORT FORMATIVO PROFESSIONALE in italiano, strutturato come segue:
+
+## VALUTAZIONE COMPLESSIVA
+Una sintesi di 2-3 frasi con giudizio calibrato e voto in chiaro (es. "Performance solida — 7.5/10").
+
+## ANALISI DEL TEAM COME SISTEMA
+Descrivi le dinamiche osservate: distribuzione dei ruoli (chi ha guidato, chi ha eseguito, chi ha supportato), coesione, comunicazione interna, gestione dei conflitti o delle difficoltà. Usa il framework Belbin se i dati lo suggeriscono.
+
+## GESTIONE DEL TEMPO E PRESSIONE
+Analizza i tempi per enigma: dove il team ha perso efficienza, dove ha accelerato, come ha reagito alla pressione del timer. Identifica pattern.
+
+## STILE DI PROBLEM SOLVING
+Autonomia vs dipendenza dall'aiuto esterno (AgentX). Analizza il tipo e la qualità delle domande poste. Inferisci lo stile cognitivo prevalente del gruppo (analitico, intuitivo, collaborativo, competitivo).
+
+## COMPETENZE INDIVIDUALI RILEVATE
+Sulla base dei tempi, dei punteggi differenziati e delle interazioni, descrivi i profili individuali emergenti (senza fare nomi, usa "il componente più rapido", "chi ha guidato la ricerca", ecc.).
+
+## PUNTI DI FORZA DEL TEAM
+3 punti specifici, ognuno con esempio concreto tratto dai dati.
+
+## AREE DI SVILUPPO PRIORITARIE
+3 aree con spiegazione del perché sono critiche per questo team specifico.
+
+## PIANO DI SVILUPPO CONSIGLIATO
+2-3 attività formative concrete (workshop, esercizi, metodologie) calibrate sui gap rilevati, con obiettivi misurabili e timeframe suggerito.
+
+## MESSAGGIO FINALE AL TEAM
+Un paragrafo motivazionale da leggere al gruppo, che riconosca l'impegno e apra alla crescita.
+
+Lunghezza: 700-900 parole. Basati SOLO sui dati forniti — non inventare comportamenti non supportati dai dati.
+
+${allSnapshots.length > 0 ? \`
+## ANALISI VISIVA (integra nelle sezioni precedenti)
+Sono allegate \${allSnapshots.length} foto del team durante le sfide video. Per ogni foto analizza postura, espressioni facciali, dinamiche spaziali, livello di energia. Integra queste osservazioni nelle sezioni ANALISI DEL TEAM e COMPETENZE INDIVIDUALI.\` : ""}`;
 
       const apiCall = (body) => fetch("/api/openai", {
         method: "POST",
@@ -2572,31 +2596,34 @@ Analizza ogni foto e includi nel report una sezione dedicata "ANALISI VISIVA DEL
           image_url: { url: `data:image/jpeg;base64,${sn.base64}`, detail: "low" }
         }))
       ] : prompt;
-      const r1 = await apiCall({ max_tokens: 1600, messages: [{ role: "user", content: msgContent }] });
+      const r1 = await apiCall({ max_tokens: 2400, messages: [{ role: "user", content: msgContent }] });
       const d1 = await r1.json();
       if (!r1.ok) throw new Error(d1.error?.message || `HTTP ${r1.status}`);
       setReport(d1.content?.find(c => c.type === "text")?.text || "");
 
       // ── CALL 2: structured table only ─────────────────────────────────
-      const tablePrompt = `Stai analizzando una sessione di escape game formativo.
+      const tablePrompt = `Sei un assessment specialist L&D. Analizza questa sessione di escape room formativa e assegna voti calibrati basandoti ESCLUSIVAMENTE sui dati.
 
-Dati disponibili:
+DATI:
 - Enigmi: ${scoresText || "N/D"}
-- Punteggio: ${totalScore}/${maxScore}
-- Domande fatte all'IA: ${agentQuestions || "Nessuna"}
+- Punteggio: ${totalScore}/${maxScore} (${Math.round(totalScore/maxScore*100)}%)
+- Tempo medio enigma: ${Math.floor(avgTime/60)}:${String(avgTime%60).padStart(2,"0")}
+- Richieste aiuto AgentX: ${totalAgentQuestions}
+- Domande: ${agentText || "nessuna"}
 
-Rispondi SOLO con un array JSON valido (nessun testo fuori dal JSON):
+Scala: 9-10=eccellente, 7-8=buono, 5-6=nella media, 3-4=difficoltà, 1-2=critico.
+
+Rispondi SOLO con array JSON valido:
 [
-  { "parametro": "Punti di forza", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Punti di debolezza", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Comunicazione interna", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Gestione del tempo", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Problem solving", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Autonomia decisionale", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Uso delle risorse IA", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Coesione del team", "voto": <numero 1-10>, "dettaglio": "<frase breve>" }
-]
-Inferisci i voti dai dati. Non inventare.`;
+  { "parametro": "Problem Solving", "voto": <1-10>, "dettaglio": "<osservazione specifica 1 frase>" },
+  { "parametro": "Gestione del Tempo", "voto": <1-10>, "dettaglio": "<osservazione specifica 1 frase>" },
+  { "parametro": "Autonomia", "voto": <1-10>, "dettaglio": "<basata su uso AgentX 1 frase>" },
+  { "parametro": "Comunicazione", "voto": <1-10>, "dettaglio": "<inferita da dinamiche 1 frase>" },
+  { "parametro": "Coesione del Team", "voto": <1-10>, "dettaglio": "<pattern collaborativi 1 frase>" },
+  { "parametro": "Resilienza", "voto": <1-10>, "dettaglio": "<reazione a difficoltà 1 frase>" },
+  { "parametro": "Uso Risorse IA", "voto": <1-10>, "dettaglio": "<qualità interazioni AgentX 1 frase>" },
+  { "parametro": "Performance Globale", "voto": <1-10>, "dettaglio": "<sintesi calibrata 1 frase>" }
+]\`;
 
       const r2 = await apiCall({ max_tokens: 600, messages: [{ role: "user", content: tablePrompt }] });
       const d2 = await r2.json();

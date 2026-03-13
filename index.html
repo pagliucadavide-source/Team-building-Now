@@ -6839,7 +6839,7 @@ function PlayerGameView({ game, onBack }) {
                 enigma={enigma}
                 playerName={playerName}
                 gameName={game.name}
-                onComplete={(evalResult) => {
+                onComplete={async (evalResult) => {
                   const score = evalResult?.punteggio ?? 8;
                   const entry = {
                     idx: enigmaIdx,
@@ -6874,7 +6874,7 @@ function PlayerGameView({ game, onBack }) {
               <AgentXEnigmaPlayer
                 game={game}
                 enigma={enigma}
-                onComplete={() => {
+                onComplete={async () => {
                   const elapsed = enigmaStartTime ? Math.floor((Date.now() - enigmaStartTime) / 1000) : 0;
                   const score = Math.max(1, 10 - Math.floor(elapsed / 60));
                   const entry = { idx: enigmaIdx, title: enigma.title || "Enigma AgentX", score, elapsed, expired: false };

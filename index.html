@@ -5909,6 +5909,7 @@ function PlayerGameView({ game, onBack }) {
   const [geoStatus, setGeoStatus] = useState("idle");
   const [distance, setDistance] = useState(null);
   const [freshNextCoords, setFreshNextCoords] = useState(null);
+  const [teamNotify, setTeamNotify] = useState(false); // compagno ha avanzato
   const [agentOpen, setAgentOpen] = useState(false);
   const [enigmaStartTime, setEnigmaStartTime] = useState(null);
   const [timerExpired,    setTimerExpired]    = useState(false);
@@ -6159,6 +6160,26 @@ function PlayerGameView({ game, onBack }) {
 
 
 
+  // ── Polling progresso squadra ─────────────────────────────────────────────
+  // Controlla se un compagno con lo stesso codice ha avanzato — mostra solo notifica
+  useEffect(() => {
+    if (phase === "complete" || phase === "cinematic" || phase === "intro") return;
+    const progressKey = `progress:${game.id}:${playerCode}`;
+    const poll = setInterval(async () => {
+      try {
+        const res = await storage.get(progressKey);
+        if (!res?.value) return;
+        const remoteIdx = parseInt(res.value, 10);
+        if (isNaN(remoteIdx)) return;
+        // Solo se il compagno è avanti rispetto a questo dispositivo
+        if (remoteIdx > enigmaIdx) {
+          setTeamNotify(remoteIdx);
+        }
+      } catch {}
+    }, 5000);
+    return () => clearInterval(poll);
+  }, [phase, enigmaIdx, playerCode, game.id]);
+
   const checkAnswer = async () => {
     if (answer.trim().toLowerCase() === (enigma.answer || "").trim().toLowerCase()) {
       // Calculate score
@@ -6179,6 +6200,9 @@ function PlayerGameView({ game, onBack }) {
           completedAt: new Date().toISOString(),
         }));
       } catch {}
+
+      // Salva progresso squadra — altri dispositivi con lo stesso codice riceveranno notifica
+      try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
 
       setPhase("post");
       setDistance(null);
@@ -6646,6 +6670,42 @@ function PlayerGameView({ game, onBack }) {
               </div>
             )}
 
+            {/* ── NOTIFICA SQUADRA (anche in attesa GPS) ── */}
+            {teamNotify !== false && teamNotify > enigmaIdx && (
+              <div style={{ ...styles.card, marginTop: "16px", padding: "16px 20px",
+                background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.5)",
+                borderRadius: "10px", animation: "enigma-reveal 0.4s ease" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                  <span style={{ fontSize: "28px" }}>🤝</span>
+                  <div>
+                    <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.gold,
+                      letterSpacing: "2px", marginBottom: "3px" }}>SQUADRA IN AVANTI</div>
+                    <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.text }}>
+                      Un membro del team ha già completato questo enigma
+                    </div>
+                  </div>
+                </div>
+                <button
+                  className="btn-gold"
+                  style={{ ...styles.btnPrimary, width: "100%", padding: "12px" }}
+                  onClick={async () => {
+                    setTeamNotify(false);
+                    stopGeo();
+                    unlockedRef.current = false;
+                    setUnlockedState(false);
+                    setDistance(null);
+                    setGeoStatus("idle");
+                    setEnigmaIdx(teamNotify);
+                    setPhase("enigma");
+                    setAnswer(""); setError("");
+                    setFreshNextCoords(null);
+                  }}
+                >
+                  → PROCEDI CON IL TEAM
+                </button>
+              </div>
+            )}
+
             {/* AgentX also available while waiting */}
             <div style={{ marginTop: "20px" }}>
               <button
@@ -6692,6 +6752,42 @@ function PlayerGameView({ game, onBack }) {
           )}
 
           {/* Badge "posizione verificata" se si è arrivati via GPS */}
+          {/* ── NOTIFICA SQUADRA ── */}
+          {teamNotify !== false && teamNotify > enigmaIdx && (
+            <div style={{ ...styles.card, marginBottom: "16px", padding: "16px 20px",
+              background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.5)",
+              borderRadius: "10px", animation: "enigma-reveal 0.4s ease" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                <span style={{ fontSize: "28px" }}>🤝</span>
+                <div>
+                  <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.gold,
+                    letterSpacing: "2px", marginBottom: "3px" }}>SQUADRA IN AVANTI</div>
+                  <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.text }}>
+                    Un membro del team ha già completato questo enigma
+                  </div>
+                </div>
+              </div>
+              <button
+                className="btn-gold"
+                style={{ ...styles.btnPrimary, width: "100%", padding: "12px" }}
+                onClick={async () => {
+                  setTeamNotify(false);
+                  stopGeo();
+                  unlockedRef.current = false;
+                  setUnlockedState(false);
+                  setDistance(null);
+                  setGeoStatus("idle");
+                  setEnigmaIdx(teamNotify);
+                  setPhase("enigma");
+                  setAnswer(""); setError("");
+                  setFreshNextCoords(null);
+                }}
+              >
+                → PROCEDI CON IL TEAM
+              </button>
+            </div>
+          )}
+
           {unlockedState && getCoords() && (
             <div style={{ ...styles.card, marginBottom: "16px", padding: "10px 16px", background: "rgba(46,204,113,0.07)", border: `1px solid rgba(46,204,113,0.3)`, display: "flex", alignItems: "center", gap: "10px" }}>
               <span style={{ fontSize: "18px" }}>✅</span>

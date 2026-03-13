@@ -1559,7 +1559,7 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
     // First snap at 10s, then every 60s
     let snapIdx = 0;
     setTimeout(() => { snapIdx++; captureAndEvalSnapshot(snapIdx); }, 10000);
-    snapTimerRef.current = setInterval(() => { snapIdx++; captureAndEvalSnapshot(snapIdx); }, 60000);
+    snapTimerRef.current = setInterval(() => { snapIdx++; captureAndEvalSnapshot(snapIdx); }, 15000);
     timerRef.current = setInterval(() => {
       setElapsed(prev => {
         const next = prev + 1;

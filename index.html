@@ -1537,7 +1537,7 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
       const clean = raw.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
       if (parsed.punteggio) {
-        snapScoresRef.current.push({ snap: snapIndex, punteggio: parsed.punteggio, nota: parsed.nota || "" });
+        snapScoresRef.current.push({ snap: snapIndex, punteggio: parsed.punteggio, nota: parsed.nota || "", base64 });
       }
     } catch(e) {
       // silent fail — snapshot is best-effort
@@ -2501,13 +2501,31 @@ function FormativeReportModal({ scoreData, agentLogData, game, onClose }) {
 
   const generateReport = async () => {
     setLoading(true); setError(null);
+
+    // Blocca se missione non completata
+    const completedCount = (scoreData?.scores || []).length;
+    const totalEnigmas   = (game?.enigmas || []).length;
+    if (completedCount < totalEnigmas || totalEnigmas === 0) {
+      setError(`⚠️ Missione non ancora completata (${completedCount}/${totalEnigmas} enigmi risolti). Il report sarà disponibile solo al termine.`);
+      setLoading(false);
+      return;
+    }
+
     try {
       // Build context from scores and agentX log
+      // Collect all snapshots with base64 from video challenges
+      const allSnapshots = (scoreData?.scores || []).flatMap(s =>
+        (s.videoSnapshots || []).filter(sn => sn.base64).map(sn => ({ ...sn, enigmaTitle: s.title }))
+      );
+
       const scoresText = (scoreData?.scores || []).map((s, i) => {
         let line = `Enigma ${i+1} "${s.title}": `;
         if (s.isVideo) {
           line += `SFIDA VIDEO — punteggio AI ${s.score}/10, obiettivo ${s.videoObiettivoRaggiunto ? "raggiunto" : "non raggiunto"}`;
           if (s.videoFeedback) line += `\n  Feedback: ${s.videoFeedback}`;
+          const snaps = s.videoSnapshots || [];
+          if (snaps.length) line += `\n  Snapshot: ${snaps.length} foto — punteggio visivo medio ${s.videoPunteggioVisivo ?? "n/d"}/10`;
+          snaps.forEach(sn => { line += `\n    Scatto ${sn.snap}: ${sn.punteggio}/10 — ${sn.nota}`; });
         } else {
           line += `risolto in ${Math.floor(s.elapsed/60)}:${String(s.elapsed%60).padStart(2,"0")}, punteggio ${s.score}/10${s.expired ? " (tempo scaduto)" : ""}`;
         }
@@ -2546,7 +2564,16 @@ In base a questi dati, scrivi un REPORT FORMATIVO in italiano. Il report deve:
 6. AREE DI MIGLIORAMENTO (2-3 bullet)
 7. RACCOMANDAZIONE FORMATIVA: un'attività o workshop specifico da suggerire per rafforzare le aree deboli
 
-Tono: professionale ma accessibile. Lunghezza: 400-600 parole. Non inventare dati che non hai — se mancano informazioni, basati su ciò che hai.`;
+Tono: professionale ma accessibile. Lunghezza: 400-600 parole. Non inventare dati che non hai — se mancano informazioni, basati su ciò che hai.
+
+${allSnapshots.length > 0 ? `
+ANALISI VISIVA — FOTO SFIDE VIDEO:
+Sono allegate ${allSnapshots.length} foto scattate durante le sfide video del team.
+Analizza ogni foto e includi nel report una sezione dedicata "ANALISI VISIVA DEL TEAM" con:
+- Postura del gruppo: coinvolgimento fisico, orientamento, energia corporea
+- Espressioni facciali: concentrazione, stress, entusiasmo, disorientamento
+- Dinamica di squadra: collaborazione visibile, chi guida, chi segue, isolamento
+- Evoluzione nel tempo: come cambia il gruppo tra il primo e l'ultimo scatto` : ""}`;
 
       const apiCall = (body) => fetch("/api/openai", {
         method: "POST",
@@ -2556,7 +2583,15 @@ Tono: professionale ma accessibile. Lunghezza: 400-600 parole. Non inventare dat
         body: JSON.stringify({ model: "gpt-4o", ...body }),
       });
 
-      const r1 = await apiCall({ max_tokens: 1200, messages: [{ role: "user", content: prompt }] });
+      // Build message — include snapshot images for vision analysis if available
+      const msgContent = allSnapshots.length > 0 ? [
+        { type: "text", text: prompt },
+        ...allSnapshots.slice(0, 6).map(sn => ({
+          type: "image_url",
+          image_url: { url: `data:image/jpeg;base64,${sn.base64}`, detail: "low" }
+        }))
+      ] : prompt;
+      const r1 = await apiCall({ max_tokens: 1600, messages: [{ role: "user", content: msgContent }] });
       const d1 = await r1.json();
       if (!r1.ok) throw new Error(d1.error?.message || `HTTP ${r1.status}`);
       setReport(d1.content?.find(c => c.type === "text")?.text || "");
@@ -2992,6 +3027,45 @@ Inferisci i voti dai dati. Non inventare.`;
 
               {/* Narrative text (original report, untouched) */}
               {renderReport(report)}
+
+              {/* ── GALLERIA FOTO SFIDE VIDEO ── */}
+              {(scoreData?.scores || []).some(s => s.isVideo && (s.videoSnapshots||[]).some(sn=>sn.base64)) && (
+                <div style={{ marginTop: "32px", paddingTop: "20px", borderTop: `1px solid ${G.border}` }}>
+                  <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted, letterSpacing: "3px", marginBottom: "16px" }}>
+                    📸 FOTO SCATTATE DURANTE LE SFIDE VIDEO
+                  </div>
+                  {(scoreData?.scores || []).filter(s => s.isVideo).map((s, si) => {
+                    const photos = (s.videoSnapshots || []).filter(sn => sn.base64);
+                    if (!photos.length) return null;
+                    return (
+                      <div key={si} style={{ marginBottom: "24px" }}>
+                        <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.gold, letterSpacing: "2px", marginBottom: "10px" }}>
+                          {s.title} — {photos.length} foto
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "10px" }}>
+                          {photos.map((sn, pi) => (
+                            <div key={pi} style={{ borderRadius: "6px", overflow: "hidden", border: `1px solid ${G.border}`, background: G.bg3 }}>
+                              <img
+                                src={`data:image/jpeg;base64,${sn.base64}`}
+                                alt={`Scatto ${sn.snap}`}
+                                style={{ width: "100%", display: "block", aspectRatio: "4/3", objectFit: "cover" }}
+                              />
+                              <div style={{ padding: "6px 8px" }}>
+                                <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.gold }}>
+                                  Scatto {sn.snap} — {sn.punteggio}/10
+                                </div>
+                                <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.muted, marginTop: "3px", lineHeight: "1.4" }}>
+                                  {sn.nota}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* ── TABELLA RIEPILOGATIVA ── */}
               {scoreTable?.tabella?.length > 0 && (

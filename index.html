@@ -6825,6 +6825,59 @@ function PlayerGameView({ game, onBack }) {
 
 
 
+          {/* ── OVERLAY SQUADRA sopra VideoChallenge ── */}
+          {teamNotify !== false && teamNotify > enigmaIdx && enigma.type === "video-challenge" && (
+            <div style={{
+              position: "fixed", inset: 0, zIndex: 9999,
+              background: "rgba(0,0,0,0.88)", backdropFilter: "blur(6px)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "24px", animation: "enigma-reveal 0.4s ease",
+            }}>
+              <div style={{ maxWidth: "420px", width: "100%", ...styles.card,
+                border: "1px solid rgba(201,168,76,0.6)",
+                boxShadow: "0 0 60px rgba(201,168,76,0.2)", textAlign: "center", padding: "32px 24px" }}>
+                <div style={{ fontSize: "52px", marginBottom: "12px" }}>🤝</div>
+                <div style={{ fontFamily: G.fontMono, fontSize: "13px", color: G.gold,
+                  letterSpacing: "3px", marginBottom: "10px" }}>SFIDA COMPLETATA DAL TEAM</div>
+                <div style={{ fontFamily: "'Crimson Text',Georgia,serif", fontSize: "16px",
+                  color: G.text, lineHeight: "1.7", marginBottom: "24px" }}>
+                  Un membro del team ha completato la sfida video.<br/>
+                  Puoi procedere senza ripetere la prova.
+                </div>
+                <button
+                  className="btn-gold"
+                  style={{ ...styles.btnPrimary, width: "100%", padding: "14px", fontSize: "16px" }}
+                  onClick={async () => {
+                    let syncedScores = scores;
+                    try {
+                      const sr = await storage.get(`scores:${game.id}:${playerCode}`);
+                      if (sr?.value) {
+                        const saved = JSON.parse(sr.value);
+                        if (saved.scores?.length) { syncedScores = saved.scores; setScores(saved.scores); }
+                      }
+                    } catch {}
+                    setTeamNotify(false);
+                    stopGeo();
+                    unlockedRef.current = false;
+                    setUnlockedState(false);
+                    setDistance(null);
+                    setGeoStatus("idle");
+                    setAnswer(""); setError("");
+                    setFreshNextCoords(null);
+                    if (teamNotify >= game.enigmas.length) {
+                      setPhase("complete");
+                    } else {
+                      setEnigmaIdx(teamNotify);
+                      setPhase("enigma");
+                    }
+                  }}
+                >
+                  → PROCEDI CON IL TEAM
+                </button>
+              </div>
+            </div>
+          )}
+
           {enigma.type === "video-challenge" ? (
             <div style={{ ...styles.card, marginBottom: "20px", border: "1px solid rgba(192,57,43,0.3)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>

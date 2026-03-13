@@ -1508,14 +1508,13 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
       ? "Criteri: " + enigma.aiEvalCriteria
       : "Valuta coinvolgimento, postura, espressione e approccio al problema.";
 
-    const prompt = "Sei un Senior Learning & Development Consultant con 20 anni di esperienza in formazione aziendale, psicologia dei gruppi e assessment comportamentale. Hai certificazioni in Team Dynamics (metodo Belbin), Comunicazione Non Violenta, Coaching Sistemico e metodologie esperienziali (escape room formative, outdoor training, assessment center).\nIl tuo approccio è evidence-based (ogni osservazione deriva da comportamenti osservabili), bilanciato (punti di forza prima delle aree di sviluppo), azionabile (ogni feedback include azioni concrete) e sistemico (leggi il gruppo come sistema, non come somma di individui). Linguaggio professionale, mai giudicante.\n\n" +
-      "Stai analizzando lo SCATTO N." + snapIndex + " di una sfida video in tempo reale.\n" +
-      "Team: " + gameName + " | Partecipante ripresa: " + playerName + "\n" +
-      "Sfida assegnata: " + (enigma.challenge || "Esercizio pratico di gruppo") + "\n" +
+    const prompt = "Sei un Senior Learning & Development Consultant con 20 anni di esperienza in formazione aziendale, psicologia dei gruppi e assessment comportamentale. Hai certificazioni in Team Dynamics (metodo Belbin), Comunicazione Non Violenta, Coaching Sistemico e metodologie esperienziali. Il tuo approccio è evidence-based, bilanciato, azionabile e sistemico. Linguaggio professionale, mai giudicante.\n\n" +
+      "SCATTO N." + snapIndex + " — Team: " + gameName + " | " + playerName + "\n" +
+      "Sfida: " + (enigma.challenge || "Esercizio pratico") + "\n" +
       criteria + "\n\n" +
-      "Analizza l'immagine e osserva: postura e linguaggio del corpo, espressioni facciali, dinamiche spaziali del gruppo, livello di coinvolgimento, eventuali segnali di leadership o esclusione.\n" +
+      "Analizza: postura e linguaggio del corpo, espressioni facciali, dinamiche spaziali, coinvolgimento, segnali di leadership o esclusione.\n" +
       "Rispondi SOLO con JSON valido senza testo extra:\n" +
-      '{"punteggio":<intero 1-10>,"nota":"<osservazione comportamentale specifica 2-3 frasi, evidence-based>"}';
+      '{"punteggio":<intero 1-10>,"nota":"<osservazione comportamentale specifica 2-3 frasi evidence-based>"}';
 
     try {
       const res = await fetch("/api/openai", {
@@ -1598,14 +1597,14 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
 
     const prompt = "Sei un Senior Learning & Development Consultant con 20 anni di esperienza in formazione aziendale, psicologia dei gruppi e assessment comportamentale. Hai certificazioni in Team Dynamics (metodo Belbin), Comunicazione Non Violenta, Coaching Sistemico e metodologie esperienziali. Il tuo approccio è evidence-based, bilanciato, azionabile e sistemico. Linguaggio professionale, mai giudicante.\n\n" +
       "VALUTAZIONE SFIDA VIDEO\n" +
-      "Team: \"" + gameName + "\" | Partecipante: " + playerName + "\n" +
+      "Team: \"" + gameName + "\" | " + playerName + "\n" +
       "Sfida: \"" + (enigma.challenge || "Problem solving di gruppo") + "\"\n\n" +
       snapSummary +
       criteria + "\n\n" +
-      "Produci una valutazione professionale. Rispondi SOLO con JSON valido senza testo fuori dal JSON:\n" +
+      "Rispondi SOLO con JSON valido senza testo fuori dal JSON:\n" +
       '{"punteggio":<intero 1-10>,"obiettivo_raggiunto":<true/false>,' +
-      '"feedback":"<Feedback formativo in 5-6 frasi: (1) apertura empatica sul contesto, (2) punti di forza osservati con esempi specifici, (3) dinamiche di gruppo rilevate, (4) area di miglioramento prioritaria con motivazione, (5) raccomandazione pratica concreta per il team. Tono da coach professionista. Italiano.>",' +
-      '"valutazione_obiettivi":"<Analisi approfondita in 4-5 frasi: valuta ogni obiettivo della sfida, descrivi come il team lo ha affrontato, identifica pattern comportamentali, collega la performance al potenziale di sviluppo del gruppo. Italiano.>",' +
+      '"feedback":"<5-6 frasi: apertura empatica, punti di forza con esempi, dinamiche di gruppo, area miglioramento, raccomandazione pratica concreta. Tono da coach professionista. Italiano.>",' +
+      '"valutazione_obiettivi":"<4-5 frasi: valuta ogni obiettivo, descrivi come il team lo ha affrontato, identifica pattern comportamentali, collega al potenziale di sviluppo. Italiano.>",' +
       '"punteggio_visivo":' + (snapAvg !== null ? snapAvg : "null") + ',' +
       '"dettaglio_scatti":' + (snaps.length > 0 ? JSON.stringify(snaps) : "[]") + '}';
 
@@ -1740,8 +1739,6 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
               <span>🤖 Valutazione AI automatica</span>
             </div>
           </div>
-
-          {/* ── ISTRUZIONI RIPRESA ── */}
           <div style={{ ...styles.card, border: "1px solid rgba(41,182,246,0.35)",
             background: "rgba(41,182,246,0.05)", marginBottom: "16px" }}>
             <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: "#29b6f6",
@@ -1753,21 +1750,17 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
               mentre svolge la prova</strong>.
             </div>
             <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-              {[
-                "📷  Inquadra tutto il gruppo e il lavoro che state svolgendo",
+              {["📷  Inquadra tutto il gruppo e il lavoro che state svolgendo",
                 "🧑‍🤝‍🧑  Assicurati che i volti e le azioni siano ben visibili",
                 "🎯  La telecamera valuterà postura, espressioni e collaborazione",
                 "⚠️  Non coprire l'obiettivo — la ripresa deve essere stabile",
               ].map((line, i) => (
-                <div key={i} style={{ display: "flex", gap: "10px", alignItems: "flex-start",
-                  fontFamily: G.fontMono, fontSize: "12px", color: G.muted, lineHeight: "1.6" }}>
+                <div key={i} style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.muted, lineHeight: "1.6" }}>
                   {line}
                 </div>
               ))}
             </div>
           </div>
-
-
 
           {camError && (
             <div style={{ ...styles.card, marginBottom: "12px", background: "rgba(192,57,43,0.08)",
@@ -2484,8 +2477,6 @@ function FormativeReportModal({ scoreData, agentLogData, game, onClose }) {
 
   const generateReport = async () => {
     setLoading(true); setError(null);
-
-    // Blocca se missione non completata
     const completedCount = (scoreData?.scores || []).length;
     const totalEnigmas   = (game?.enigmas || []).length;
     if (completedCount < totalEnigmas || totalEnigmas === 0) {
@@ -2493,22 +2484,16 @@ function FormativeReportModal({ scoreData, agentLogData, game, onClose }) {
       setLoading(false);
       return;
     }
-
     try {
       // Build context from scores and agentX log
-      // Collect all snapshots with base64 from video challenges
       const allSnapshots = (scoreData?.scores || []).flatMap(s =>
         (s.videoSnapshots || []).filter(sn => sn.base64).map(sn => ({ ...sn, enigmaTitle: s.title }))
       );
-
       const scoresText = (scoreData?.scores || []).map((s, i) => {
         let line = `Enigma ${i+1} "${s.title}": `;
         if (s.isVideo) {
           line += `SFIDA VIDEO — punteggio AI ${s.score}/10, obiettivo ${s.videoObiettivoRaggiunto ? "raggiunto" : "non raggiunto"}`;
           if (s.videoFeedback) line += `\n  Feedback: ${s.videoFeedback}`;
-          const snaps = s.videoSnapshots || [];
-          if (snaps.length) line += `\n  Snapshot: ${snaps.length} foto — punteggio visivo medio ${s.videoPunteggioVisivo ?? "n/d"}/10`;
-          snaps.forEach(sn => { line += `\n    Scatto ${sn.snap}: ${sn.punteggio}/10 — ${sn.nota}`; });
         } else {
           line += `risolto in ${Math.floor(s.elapsed/60)}:${String(s.elapsed%60).padStart(2,"0")}, punteggio ${s.score}/10${s.expired ? " (tempo scaduto)" : ""}`;
         }
@@ -2526,59 +2511,51 @@ function FormativeReportModal({ scoreData, agentLogData, game, onClose }) {
       const gameName   = scoreData?.gameName   || agentLogData?.gameName   || game?.name || "—";
 
       // ── CALL 1: narrative report (unchanged original) ─────────────────
-      const prompt = `Sei un Senior Learning & Development Consultant con 20 anni di esperienza in formazione aziendale, psicologia dei gruppi e assessment comportamentale. Hai certificazioni in Team Dynamics (metodo Belbin), Comunicazione Non Violenta, Coaching Sistemico e metodologie esperienziali (escape room formative, outdoor training, assessment center).
-Il tuo approccio è evidence-based (ogni osservazione deriva da dati concreti), bilanciato (punti di forza prima delle aree di sviluppo), azionabile (ogni feedback include azioni concrete e misurabili) e sistemico (leggi il gruppo come sistema, non come somma di individui).
+      const prompt = `Sei un Senior Learning & Development Consultant con 20 anni di esperienza in formazione aziendale, psicologia dei gruppi e assessment comportamentale. Certificazioni in Team Dynamics (Belbin), Comunicazione Non Violenta, Coaching Sistemico e metodologie esperienziali (escape room formative, outdoor training, assessment center). Approccio evidence-based, bilanciato, azionabile, sistemico. Linguaggio professionale, mai giudicante.
 
-Hai appena supervisionato la sessione di escape game formativo "${gameName}" per il gruppo "${playerName}" (codice: ${playerCode}).
+Hai supervisionato la sessione "${gameName}" per il gruppo "${playerName}" (codice: ${playerCode}).
 
 ════ DATI SESSIONE ════
-
-PERFORMANCE:
 ${scoresText}
 
-PUNTEGGIO TOTALE: ${totalScore}/${maxScore} (${Math.round(totalScore/maxScore*100)}%)
-TEMPO MEDIO PER ENIGMA: ${Math.floor(avgTime/60)}:${String(avgTime%60).padStart(2,"0")}
-INTERAZIONI CON AGENTX (richieste di aiuto): ${totalAgentQuestions}
-
-DOMANDE AD AGENTX (indicatore di stile cognitivo e autonomia):
-${agentText}
+PUNTEGGIO: ${totalScore}/${maxScore} (${Math.round(totalScore/maxScore*100)}%)
+TEMPO MEDIO ENIGMA: ${Math.floor(avgTime/60)}:${String(avgTime%60).padStart(2,"0")}
+RICHIESTE AIUTO AGENTX: ${totalAgentQuestions}
+DOMANDE AD AGENTX: ${agentText || "nessuna"}
 
 ════ REPORT RICHIESTO ════
-
-Scrivi un REPORT FORMATIVO PROFESSIONALE in italiano, strutturato come segue:
+Scrivi un REPORT FORMATIVO PROFESSIONALE in italiano con queste sezioni:
 
 ## VALUTAZIONE COMPLESSIVA
-Una sintesi di 2-3 frasi con giudizio calibrato e voto in chiaro (es. "Performance solida — 7.5/10").
+Sintesi 2-3 frasi con voto calibrato (es. "Performance solida — 7.5/10").
 
 ## ANALISI DEL TEAM COME SISTEMA
-Descrivi le dinamiche osservate: distribuzione dei ruoli (chi ha guidato, chi ha eseguito, chi ha supportato), coesione, comunicazione interna, gestione dei conflitti o delle difficoltà. Usa il framework Belbin se i dati lo suggeriscono.
+Distribuzione ruoli (chi ha guidato, chi ha eseguito, chi ha supportato), coesione, comunicazione interna, gestione delle difficoltà. Usa framework Belbin se i dati lo suggeriscono.
 
 ## GESTIONE DEL TEMPO E PRESSIONE
-Analizza i tempi per enigma: dove il team ha perso efficienza, dove ha accelerato, come ha reagito alla pressione del timer. Identifica pattern.
+Analizza i tempi per enigma: dove il team ha perso o guadagnato efficienza, come ha reagito alla pressione. Identifica pattern.
 
 ## STILE DI PROBLEM SOLVING
-Autonomia vs dipendenza dall'aiuto esterno (AgentX). Analizza il tipo e la qualità delle domande poste. Inferisci lo stile cognitivo prevalente del gruppo (analitico, intuitivo, collaborativo, competitivo).
+Autonomia vs dipendenza dall'aiuto esterno (AgentX). Qualità delle domande poste. Stile cognitivo prevalente del gruppo.
 
 ## COMPETENZE INDIVIDUALI RILEVATE
-Sulla base dei tempi, dei punteggi differenziati e delle interazioni, descrivi i profili individuali emergenti (senza fare nomi, usa "il componente più rapido", "chi ha guidato la ricerca", ecc.).
+Profili emergenti dai dati (senza nomi: "il componente più rapido", "chi ha guidato", ecc.).
 
-## PUNTI DI FORZA DEL TEAM
-3 punti specifici, ognuno con esempio concreto tratto dai dati.
+## PUNTI DI FORZA
+3 punti specifici con esempio concreto dai dati.
 
 ## AREE DI SVILUPPO PRIORITARIE
-3 aree con spiegazione del perché sono critiche per questo team specifico.
+3 aree con spiegazione del perché sono critiche per questo team.
 
-## PIANO DI SVILUPPO CONSIGLIATO
-2-3 attività formative concrete (workshop, esercizi, metodologie) calibrate sui gap rilevati, con obiettivi misurabili e timeframe suggerito.
+## PIANO DI SVILUPPO
+2-3 attività formative concrete calibrate sui gap rilevati, con obiettivi misurabili.
 
 ## MESSAGGIO FINALE AL TEAM
-Un paragrafo motivazionale da leggere al gruppo, che riconosca l'impegno e apra alla crescita.
+Paragrafo motivazionale da leggere al gruppo.
 
-Lunghezza: 700-900 parole. Basati SOLO sui dati forniti — non inventare comportamenti non supportati dai dati.
+Lunghezza: 700-900 parole. Basati SOLO sui dati. Non inventare.
 
-${allSnapshots.length > 0 ? \`
-## ANALISI VISIVA (integra nelle sezioni precedenti)
-Sono allegate \${allSnapshots.length} foto del team durante le sfide video. Per ogni foto analizza postura, espressioni facciali, dinamiche spaziali, livello di energia. Integra queste osservazioni nelle sezioni ANALISI DEL TEAM e COMPETENZE INDIVIDUALI.\` : ""}`;
+${allSnapshots.length > 0 ? \`ANALISI VISIVA: Sono allegate \${allSnapshots.length} foto del team. Analizza postura, espressioni, dinamiche e integra nelle sezioni ANALISI DEL TEAM e COMPETENZE INDIVIDUALI.\` : ""}`;
 
       const apiCall = (body) => fetch("/api/openai", {
         method: "POST",
@@ -2588,12 +2565,10 @@ Sono allegate \${allSnapshots.length} foto del team durante le sfide video. Per 
         body: JSON.stringify({ model: "gpt-4o", ...body }),
       });
 
-      // Build message — include snapshot images for vision analysis if available
       const msgContent = allSnapshots.length > 0 ? [
         { type: "text", text: prompt },
         ...allSnapshots.slice(0, 6).map(sn => ({
-          type: "image_url",
-          image_url: { url: `data:image/jpeg;base64,${sn.base64}`, detail: "low" }
+          type: "image_url", image_url: { url: `data:image/jpeg;base64,${sn.base64}`, detail: "low" }
         }))
       ] : prompt;
       const r1 = await apiCall({ max_tokens: 2400, messages: [{ role: "user", content: msgContent }] });
@@ -2602,14 +2577,9 @@ Sono allegate \${allSnapshots.length} foto del team durante le sfide video. Per 
       setReport(d1.content?.find(c => c.type === "text")?.text || "");
 
       // ── CALL 2: structured table only ─────────────────────────────────
-      const tablePrompt = `Sei un assessment specialist L&D. Analizza questa sessione di escape room formativa e assegna voti calibrati basandoti ESCLUSIVAMENTE sui dati.
+      const tablePrompt = `Sei un assessment specialist L&D. Assegna voti calibrati basandoti ESCLUSIVAMENTE sui dati.
 
-DATI:
-- Enigmi: ${scoresText || "N/D"}
-- Punteggio: ${totalScore}/${maxScore} (${Math.round(totalScore/maxScore*100)}%)
-- Tempo medio enigma: ${Math.floor(avgTime/60)}:${String(avgTime%60).padStart(2,"0")}
-- Richieste aiuto AgentX: ${totalAgentQuestions}
-- Domande: ${agentText || "nessuna"}
+DATI: ${scoresText || "N/D"} | Punteggio: ${totalScore}/${maxScore} (${Math.round(totalScore/maxScore*100)}%) | Tempo medio: ${Math.floor(avgTime/60)}:${String(avgTime%60).padStart(2,"0")} | AgentX: ${totalAgentQuestions} richieste
 
 Scala: 9-10=eccellente, 7-8=buono, 5-6=nella media, 3-4=difficoltà, 1-2=critico.
 
@@ -2623,7 +2593,7 @@ Rispondi SOLO con array JSON valido:
   { "parametro": "Resilienza", "voto": <1-10>, "dettaglio": "<reazione a difficoltà 1 frase>" },
   { "parametro": "Uso Risorse IA", "voto": <1-10>, "dettaglio": "<qualità interazioni AgentX 1 frase>" },
   { "parametro": "Performance Globale", "voto": <1-10>, "dettaglio": "<sintesi calibrata 1 frase>" }
-]\`;
+]`;
 
       const r2 = await apiCall({ max_tokens: 600, messages: [{ role: "user", content: tablePrompt }] });
       const d2 = await r2.json();
@@ -3033,138 +3003,54 @@ Rispondi SOLO con array JSON valido:
                 </div>
               )}
 
-              {/* Narrative text */}
               {renderReport(report)}
 
-              {/* ── PROVE VIDEO ── */}
-              {(scoreData?.scores || []).some(s => s.isVideo) && (
+              {(scoreData?.scores || []).some(s => s.isVideo && (s.videoSnapshots||[]).some(sn=>sn.base64)) && (
                 <div style={{ marginTop: "32px", paddingTop: "20px", borderTop: `1px solid ${G.border}` }}>
-                  <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted,
-                    letterSpacing: "3px", marginBottom: "20px" }}>📹 ANALISI PROVE VIDEO</div>
+                  <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted, letterSpacing: "3px", marginBottom: "20px" }}>📹 ANALISI PROVE VIDEO</div>
                   {(scoreData?.scores || []).filter(s => s.isVideo).map((s, vi) => {
                     const photos = (s.videoSnapshots || []).filter(sn => sn.base64);
-                    const goalColor = s.videoObiettivoRaggiunto ? "#2ecc71" : "#c0392b";
                     return (
-                      <div key={vi} style={{ marginBottom: "28px", padding: "20px",
-                        border: `1px solid rgba(201,168,76,0.2)`, borderRadius: "8px",
-                        background: "rgba(201,168,76,0.03)" }}>
-
-                        {/* Header prova */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px",
-                          marginBottom: "16px", paddingBottom: "12px", borderBottom: `1px solid ${G.border}` }}>
-                          <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.gold,
-                            letterSpacing: "3px" }}>📹 PROVA VIDEO {vi + 1}</div>
-                          <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.text,
-                            flex: 1 }}>{s.title}</div>
-                          <div style={{ fontFamily: G.fontMono, fontSize: "20px", color: G.gold,
-                            fontWeight: "bold" }}>{s.score}<span style={{ fontSize: "11px",
-                            color: G.muted }}>/10</span></div>
+                      <div key={vi} style={{ marginBottom: "28px", padding: "20px", border: `1px solid rgba(201,168,76,0.2)`, borderRadius: "8px", background: "rgba(201,168,76,0.03)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", paddingBottom: "12px", borderBottom: `1px solid ${G.border}` }}>
+                          <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.gold, letterSpacing: "3px" }}>📹 PROVA VIDEO {vi+1}</div>
+                          <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.text, flex: 1 }}>{s.title}</div>
+                          <div style={{ fontFamily: G.fontMono, fontSize: "20px", color: G.gold, fontWeight: "bold" }}>{s.score}<span style={{ fontSize: "11px", color: G.muted }}>/10</span></div>
                         </div>
-
-                        {/* Obiettivo */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px",
-                          marginBottom: "14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                           <span style={{ fontSize: "20px" }}>{s.videoObiettivoRaggiunto ? "✅" : "❌"}</span>
-                          <span style={{ fontFamily: G.fontMono, fontSize: "11px", color: goalColor,
-                            letterSpacing: "2px" }}>
+                          <span style={{ fontFamily: G.fontMono, fontSize: "11px", color: s.videoObiettivoRaggiunto ? "#2ecc71" : "#c0392b", letterSpacing: "2px" }}>
                             OBIETTIVO {s.videoObiettivoRaggiunto ? "RAGGIUNTO" : "NON RAGGIUNTO"}
                           </span>
                         </div>
-
-                        {/* Valutazione obiettivi */}
                         {s.videoValutazioneObiettivi && (
-                          <div style={{ marginBottom: "12px", padding: "12px 14px",
-                            background: "rgba(192,57,43,0.05)", borderRadius: "6px",
-                            border: "1px solid rgba(192,57,43,0.15)" }}>
-                            <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: "#e8a0a0",
-                              letterSpacing: "2px", marginBottom: "8px" }}>🎯 VALUTAZIONE OBIETTIVI</div>
-                            <div style={{ fontFamily: "'Crimson Text',Georgia,serif", fontSize: "15px",
-                              lineHeight: "1.8", color: G.text }}>{s.videoValutazioneObiettivi}</div>
+                          <div style={{ marginBottom: "12px", padding: "12px 14px", background: "rgba(192,57,43,0.05)", borderRadius: "6px", border: "1px solid rgba(192,57,43,0.15)" }}>
+                            <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: "#e8a0a0", letterSpacing: "2px", marginBottom: "8px" }}>🎯 VALUTAZIONE OBIETTIVI</div>
+                            <div style={{ fontFamily: "'Crimson Text',Georgia,serif", fontSize: "15px", lineHeight: "1.8", color: G.text }}>{s.videoValutazioneObiettivi}</div>
                           </div>
                         )}
-
-                        {/* Feedback */}
                         {s.videoFeedback && (
-                          <div style={{ marginBottom: "16px", padding: "12px 14px",
-                            background: "rgba(201,168,76,0.04)", borderRadius: "6px",
-                            border: "1px solid rgba(201,168,76,0.15)" }}>
-                            <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.gold,
-                              letterSpacing: "2px", marginBottom: "8px" }}>🤖 FEEDBACK FORMATIVO</div>
-                            <div style={{ fontFamily: "'Crimson Text',Georgia,serif", fontSize: "15px",
-                              lineHeight: "1.8", color: G.text }}>{s.videoFeedback}</div>
+                          <div style={{ marginBottom: "16px", padding: "12px 14px", background: "rgba(201,168,76,0.04)", borderRadius: "6px", border: "1px solid rgba(201,168,76,0.15)" }}>
+                            <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.gold, letterSpacing: "2px", marginBottom: "8px" }}>🤖 FEEDBACK FORMATIVO</div>
+                            <div style={{ fontFamily: "'Crimson Text',Georgia,serif", fontSize: "15px", lineHeight: "1.8", color: G.text }}>{s.videoFeedback}</div>
                           </div>
                         )}
-
-                        {/* Foto scattate */}
                         {photos.length > 0 && (
                           <div>
-                            <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: "#29b6f6",
-                              letterSpacing: "2px", marginBottom: "10px" }}>
-                              📸 FOTO DEL TEAM — {photos.length} scatti
-                            </div>
-                            <div style={{ display: "grid",
-                              gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "10px" }}>
+                            <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: "#29b6f6", letterSpacing: "2px", marginBottom: "10px" }}>📸 FOTO DEL TEAM — {photos.length} scatti</div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: "10px" }}>
                               {photos.map((sn, pi) => (
-                                <div key={pi} style={{ borderRadius: "6px", overflow: "hidden",
-                                  border: `1px solid ${G.border}`, background: "#0d0d14" }}>
-                                  <img
-                                    src={`data:image/jpeg;base64,${sn.base64}`}
-                                    alt={`Scatto ${sn.snap}`}
-                                    style={{ width: "100%", display: "block",
-                                      aspectRatio: "4/3", objectFit: "cover" }}
-                                  />
+                                <div key={pi} style={{ borderRadius: "6px", overflow: "hidden", border: `1px solid ${G.border}`, background: "#0d0d14" }}>
+                                  <img src={`data:image/jpeg;base64,${sn.base64}`} alt={`Scatto ${sn.snap}`} style={{ width: "100%", display: "block", aspectRatio: "4/3", objectFit: "cover" }} />
                                   <div style={{ padding: "6px 8px" }}>
-                                    <div style={{ fontFamily: G.fontMono, fontSize: "9px",
-                                      color: G.gold }}>Scatto {sn.snap} — {sn.punteggio}/10</div>
-                                    <div style={{ fontFamily: G.fontMono, fontSize: "9px",
-                                      color: G.muted, marginTop: "3px", lineHeight: "1.4" }}>
-                                      {sn.nota}
-                                    </div>
+                                    <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.gold }}>Scatto {sn.snap} — {sn.punteggio}/10</div>
+                                    <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.muted, marginTop: "3px", lineHeight: "1.4" }}>{sn.nota}</div>
                                   </div>
                                 </div>
                               ))}
                             </div>
                           </div>
                         )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* ── GALLERIA FOTO SFIDE VIDEO ── */}
-              {(scoreData?.scores || []).some(s => s.isVideo && (s.videoSnapshots||[]).some(sn=>sn.base64)) && (
-                <div style={{ marginTop: "32px", paddingTop: "20px", borderTop: `1px solid ${G.border}` }}>
-                  <div style={{ fontFamily: G.fontMono, fontSize: "11px", color: G.muted, letterSpacing: "3px", marginBottom: "16px" }}>
-                    📸 FOTO SCATTATE DURANTE LE SFIDE VIDEO
-                  </div>
-                  {(scoreData?.scores || []).filter(s => s.isVideo).map((s, si) => {
-                    const photos = (s.videoSnapshots || []).filter(sn => sn.base64);
-                    if (!photos.length) return null;
-                    return (
-                      <div key={si} style={{ marginBottom: "24px" }}>
-                        <div style={{ fontFamily: G.fontMono, fontSize: "10px", color: G.gold, letterSpacing: "2px", marginBottom: "10px" }}>
-                          {s.title} — {photos.length} foto
-                        </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "10px" }}>
-                          {photos.map((sn, pi) => (
-                            <div key={pi} style={{ borderRadius: "6px", overflow: "hidden", border: `1px solid ${G.border}`, background: G.bg3 }}>
-                              <img
-                                src={`data:image/jpeg;base64,${sn.base64}`}
-                                alt={`Scatto ${sn.snap}`}
-                                style={{ width: "100%", display: "block", aspectRatio: "4/3", objectFit: "cover" }}
-                              />
-                              <div style={{ padding: "6px 8px" }}>
-                                <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.gold }}>
-                                  Scatto {sn.snap} — {sn.punteggio}/10
-                                </div>
-                                <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.muted, marginTop: "3px", lineHeight: "1.4" }}>
-                                  {sn.nota}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     );
                   })}
@@ -5936,7 +5822,7 @@ function PlayerGameView({ game, onBack }) {
   const [geoStatus, setGeoStatus] = useState("idle");
   const [distance, setDistance] = useState(null);
   const [freshNextCoords, setFreshNextCoords] = useState(null);
-  const [teamNotify, setTeamNotify] = useState(false); // compagno ha avanzato
+  const [teamNotify, setTeamNotify] = useState(false);
   const [agentOpen, setAgentOpen] = useState(false);
   const [enigmaStartTime, setEnigmaStartTime] = useState(null);
   const [timerExpired,    setTimerExpired]    = useState(false);
@@ -6017,7 +5903,6 @@ function PlayerGameView({ game, onBack }) {
 
     if (dm <= GEO_RADIUS) {
       if (!unlockedRef.current) {
-        // GPS confirms proximity — show the button, but DON'T auto-unlock
         setGeoStatus("near");
       }
     } else {
@@ -6185,10 +6070,9 @@ function PlayerGameView({ game, onBack }) {
     return () => stopGeo();
   }, [phase, enigmaIdx]);
 
-
-
-  // ── Polling progresso squadra ─────────────────────────────────────────────
-  // Controlla se un compagno con lo stesso codice ha avanzato — mostra solo notifica
+  // ── Polling progresso condiviso ──────────────────────────────────────────
+  // Se un compagno di squadra ha risolto l'enigma con lo stesso codice,
+  // questo dispositivo avanza automaticamente alla stessa posizione
   useEffect(() => {
     if (phase === "complete" || phase === "cinematic" || phase === "intro") return;
     const progressKey = `progress:${game.id}:${playerCode}`;
@@ -6198,10 +6082,31 @@ function PlayerGameView({ game, onBack }) {
         if (!res?.value) return;
         const remoteIdx = parseInt(res.value, 10);
         if (isNaN(remoteIdx)) return;
-        // Solo se il compagno è avanti rispetto a questo dispositivo
+        // Avanza solo se il progresso remoto è maggiore di quello locale
         if (remoteIdx > enigmaIdx) {
-          setTeamNotify(remoteIdx);
+          setEnigmaIdx(remoteIdx);
+          setPhase("enigma");
+          setAnswer(""); setError("");
+          setDistance(null); setFreshNextCoords(null);
+          setGeoStatus("idle");
+          unlockedRef.current = false;
+          setUnlockedState(false);
         }
+      } catch {}
+    }, 5000); // controlla ogni 5 secondi
+    return () => clearInterval(poll);
+  }, [phase, enigmaIdx, playerCode, game.id]);
+
+  useEffect(() => {
+    if (phase === "complete" || phase === "cinematic" || phase === "intro") return;
+    const progressKey = `progress:${game.id}:${playerCode}`;
+    const poll = setInterval(async () => {
+      try {
+        const res = await storage.get(progressKey);
+        if (!res?.value) return;
+        const remoteIdx = parseInt(res.value, 10);
+        if (isNaN(remoteIdx)) return;
+        if (remoteIdx > enigmaIdx) setTeamNotify(remoteIdx);
       } catch {}
     }, 5000);
     return () => clearInterval(poll);
@@ -6228,9 +6133,7 @@ function PlayerGameView({ game, onBack }) {
         }));
       } catch {}
 
-      // Salva progresso squadra — altri dispositivi con lo stesso codice riceveranno notifica
       try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
-
       setPhase("post");
       setDistance(null);
       setFreshNextCoords(null);
@@ -6653,21 +6556,17 @@ function PlayerGameView({ game, onBack }) {
                   </div>
                 )}
 
-                {/* INIZIA MISSIONE — visibile solo quando GPS conferma vicinanza */}
                 {geoStatus === "near" && (
                   <div style={{ marginBottom: "20px" }}>
-                    <button
-                      className="btn-gold"
+                    <button className="btn-gold"
                       style={{ ...styles.btnPrimary, padding: "16px 48px", fontSize: "18px",
-                        background: "linear-gradient(135deg,#2ed573,#27ae60)", borderColor: "#2ed573",
-                        width: "100%" }}
+                        background: "linear-gradient(135deg,#2ed573,#27ae60)", borderColor: "#2ed573", width: "100%" }}
                       onClick={() => {
                         unlockedRef.current = true;
                         setUnlockedState(true);
                         setEnigmaStartTime(Date.now());
                         setTimerExpired(false);
-                      }}
-                    >
+                      }}>
                       🔓 INIZIA MISSIONE
                     </button>
                   </div>
@@ -6697,7 +6596,6 @@ function PlayerGameView({ game, onBack }) {
               </div>
             )}
 
-            {/* ── NOTIFICA SQUADRA (anche in attesa GPS) ── */}
             {teamNotify !== false && teamNotify > enigmaIdx && (
               <div style={{ ...styles.card, marginTop: "16px", padding: "16px 20px",
                 background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.5)",
@@ -6712,11 +6610,9 @@ function PlayerGameView({ game, onBack }) {
                     </div>
                   </div>
                 </div>
-                <button
-                  className="btn-gold"
+                <button className="btn-gold"
                   style={{ ...styles.btnPrimary, width: "100%", padding: "12px" }}
                   onClick={async () => {
-                    // Sincronizza scores dal compagno
                     let syncedScores = scores;
                     try {
                       const sr = await storage.get(`scores:${game.id}:${playerCode}`);
@@ -6725,23 +6621,13 @@ function PlayerGameView({ game, onBack }) {
                         if (saved.scores?.length) { syncedScores = saved.scores; setScores(saved.scores); }
                       }
                     } catch {}
-                    setTeamNotify(false);
-                    stopGeo();
-                    unlockedRef.current = false;
-                    setUnlockedState(false);
-                    setDistance(null);
-                    setGeoStatus("idle");
-                    setAnswer(""); setError("");
-                    setFreshNextCoords(null);
-                    // Se il compagno ha completato l'ultimo enigma → vai a complete
-                    if (teamNotify >= game.enigmas.length) {
-                      setPhase("complete");
-                    } else {
-                      setEnigmaIdx(teamNotify);
-                      setPhase("enigma");
-                    }
-                  }}
-                >
+                    setTeamNotify(false); stopGeo();
+                    unlockedRef.current = false; setUnlockedState(false);
+                    setDistance(null); setGeoStatus("idle");
+                    setAnswer(""); setError(""); setFreshNextCoords(null);
+                    if (teamNotify >= game.enigmas.length) { setPhase("complete"); }
+                    else { setEnigmaIdx(teamNotify); setPhase("enigma"); }
+                  }}>
                   → PROCEDI CON IL TEAM
                 </button>
               </div>
@@ -6793,7 +6679,6 @@ function PlayerGameView({ game, onBack }) {
           )}
 
           {/* Badge "posizione verificata" se si è arrivati via GPS */}
-          {/* ── NOTIFICA SQUADRA ── */}
           {teamNotify !== false && teamNotify > enigmaIdx && (
             <div style={{ ...styles.card, marginBottom: "16px", padding: "16px 20px",
               background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.5)",
@@ -6808,73 +6693,9 @@ function PlayerGameView({ game, onBack }) {
                   </div>
                 </div>
               </div>
-              <button
-                className="btn-gold"
+              <button className="btn-gold"
                 style={{ ...styles.btnPrimary, width: "100%", padding: "12px" }}
                 onClick={async () => {
-                  // Sincronizza scores dal compagno
-                  let syncedScores = scores;
-                  try {
-                    const sr = await storage.get(`scores:${game.id}:${playerCode}`);
-                    if (sr?.value) {
-                      const saved = JSON.parse(sr.value);
-                      if (saved.scores?.length) { syncedScores = saved.scores; setScores(saved.scores); }
-                    }
-                  } catch {}
-                  setTeamNotify(false);
-                  stopGeo();
-                  unlockedRef.current = false;
-                  setUnlockedState(false);
-                  setDistance(null);
-                  setGeoStatus("idle");
-                  setAnswer(""); setError("");
-                  setFreshNextCoords(null);
-                  // Se il compagno ha completato l'ultimo enigma → vai a complete
-                  if (teamNotify >= game.enigmas.length) {
-                    setPhase("complete");
-                  } else {
-                    setEnigmaIdx(teamNotify);
-                    setPhase("enigma");
-                  }
-                }}
-              >
-                → PROCEDI CON IL TEAM
-              </button>
-            </div>
-          )}
-
-          {unlockedState && getCoords() && (
-            <div style={{ ...styles.card, marginBottom: "16px", padding: "10px 16px", background: "rgba(46,204,113,0.07)", border: `1px solid rgba(46,204,113,0.3)`, display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "18px" }}>✅</span>
-              <span style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.success, letterSpacing: "1px" }}>POSIZIONE VERIFICATA — Enigma sbloccato{distance !== null ? ` (${distance}m)` : ""}</span>
-            </div>
-          )}
-
-
-
-          {/* ── OVERLAY SQUADRA sopra VideoChallenge ── */}
-          {teamNotify !== false && teamNotify > enigmaIdx && enigma.type === "video-challenge" && (
-            <div style={{
-              position: "fixed", inset: 0, zIndex: 9999,
-              background: "rgba(0,0,0,0.88)", backdropFilter: "blur(6px)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              padding: "24px", animation: "enigma-reveal 0.4s ease",
-            }}>
-              <div style={{ maxWidth: "420px", width: "100%", ...styles.card,
-                border: "1px solid rgba(201,168,76,0.6)",
-                boxShadow: "0 0 60px rgba(201,168,76,0.2)", textAlign: "center", padding: "32px 24px" }}>
-                <div style={{ fontSize: "52px", marginBottom: "12px" }}>🤝</div>
-                <div style={{ fontFamily: G.fontMono, fontSize: "13px", color: G.gold,
-                  letterSpacing: "3px", marginBottom: "10px" }}>SFIDA COMPLETATA DAL TEAM</div>
-                <div style={{ fontFamily: "'Crimson Text',Georgia,serif", fontSize: "16px",
-                  color: G.text, lineHeight: "1.7", marginBottom: "24px" }}>
-                  Un membro del team ha completato la sfida video.<br/>
-                  Puoi procedere senza ripetere la prova.
-                </div>
-                <button
-                  className="btn-gold"
-                  style={{ ...styles.btnPrimary, width: "100%", padding: "14px", fontSize: "16px" }}
-                  onClick={async () => {
                     let syncedScores = scores;
                     try {
                       const sr = await storage.get(`scores:${game.id}:${playerCode}`);
@@ -6897,8 +6718,55 @@ function PlayerGameView({ game, onBack }) {
                       setEnigmaIdx(teamNotify);
                       setPhase("enigma");
                     }
-                  }}
-                >
+                  }}>
+                → PROCEDI CON IL TEAM
+              </button>
+            </div>
+          )}
+
+          {unlockedState && getCoords() && (
+            <div style={{ ...styles.card, marginBottom: "16px", padding: "10px 16px", background: "rgba(46,204,113,0.07)", border: `1px solid rgba(46,204,113,0.3)`, display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "18px" }}>✅</span>
+              <span style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.success, letterSpacing: "1px" }}>POSIZIONE VERIFICATA — Enigma sbloccato{distance !== null ? ` (${distance}m)` : ""}</span>
+            </div>
+          )}
+
+
+
+          {teamNotify !== false && teamNotify > enigmaIdx && enigma.type === "video-challenge" && (
+            <div style={{ position: "fixed", inset: 0, zIndex: 9999,
+              background: "rgba(0,0,0,0.88)", backdropFilter: "blur(6px)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "24px", animation: "enigma-reveal 0.4s ease" }}>
+              <div style={{ maxWidth: "420px", width: "100%", ...styles.card,
+                border: "1px solid rgba(201,168,76,0.6)",
+                boxShadow: "0 0 60px rgba(201,168,76,0.2)", textAlign: "center", padding: "32px 24px" }}>
+                <div style={{ fontSize: "52px", marginBottom: "12px" }}>🤝</div>
+                <div style={{ fontFamily: G.fontMono, fontSize: "13px", color: G.gold,
+                  letterSpacing: "3px", marginBottom: "10px" }}>SFIDA COMPLETATA DAL TEAM</div>
+                <div style={{ fontFamily: "'Crimson Text',Georgia,serif", fontSize: "16px",
+                  color: G.text, lineHeight: "1.7", marginBottom: "24px" }}>
+                  Un membro del team ha completato la sfida video.<br/>
+                  Puoi procedere senza ripetere la prova.
+                </div>
+                <button className="btn-gold"
+                  style={{ ...styles.btnPrimary, width: "100%", padding: "14px", fontSize: "16px" }}
+                  onClick={async () => {
+                    let syncedScores = scores;
+                    try {
+                      const sr = await storage.get(`scores:${game.id}:${playerCode}`);
+                      if (sr?.value) {
+                        const saved = JSON.parse(sr.value);
+                        if (saved.scores?.length) { syncedScores = saved.scores; setScores(saved.scores); }
+                      }
+                    } catch {}
+                    setTeamNotify(false); stopGeo();
+                    unlockedRef.current = false; setUnlockedState(false);
+                    setDistance(null); setGeoStatus("idle");
+                    setAnswer(""); setError(""); setFreshNextCoords(null);
+                    if (teamNotify >= game.enigmas.length) { setPhase("complete"); }
+                    else { setEnigmaIdx(teamNotify); setPhase("enigma"); }
+                  }}>
                   → PROCEDI CON IL TEAM
                 </button>
               </div>
@@ -6934,21 +6802,16 @@ function PlayerGameView({ game, onBack }) {
                   };
                   const newScores = [...scores, entry];
                   setScores(newScores);
-                  // Salva scores e progress per sincronizzazione squadra
                   try {
                     await storage.set(`scores:${game.id}:${playerCode}`, JSON.stringify({
-                      playerCode, playerName,
-                      gameId: game.id, gameName: game.name,
-                      scores: newScores,
-                      total: newScores.reduce((s, e) => s + e.score, 0),
+                      playerCode, playerName, gameId: game.id, gameName: game.name,
+                      scores: newScores, total: newScores.reduce((s,e) => s+e.score, 0),
                       completedAt: new Date().toISOString(),
                     }));
                   } catch {}
                   try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
                   if (isLast) setPhase("complete");
-                  else {
-                    setPhase("post"); setDistance(null); setFreshNextCoords(null);
-                  }
+                  else { setPhase("post"); setDistance(null); setFreshNextCoords(null); }
                 }}
               />
             </div>
@@ -6969,21 +6832,16 @@ function PlayerGameView({ game, onBack }) {
                   const entry = { idx: enigmaIdx, title: enigma.title || "Enigma AgentX", score, elapsed, expired: false };
                   const newScores = [...scores, entry];
                   setScores(newScores);
-                  // Salva scores e progress per sincronizzazione squadra
                   try {
                     await storage.set(`scores:${game.id}:${playerCode}`, JSON.stringify({
-                      playerCode, playerName,
-                      gameId: game.id, gameName: game.name,
-                      scores: newScores,
-                      total: newScores.reduce((s, e) => s + e.score, 0),
+                      playerCode, playerName, gameId: game.id, gameName: game.name,
+                      scores: newScores, total: newScores.reduce((s,e) => s+e.score, 0),
                       completedAt: new Date().toISOString(),
                     }));
                   } catch {}
                   try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
                   if (isLast) setPhase("complete");
-                  else {
-                    setPhase("post"); setDistance(null); setFreshNextCoords(null);
-                  }
+                  else { setPhase("post"); setDistance(null); setFreshNextCoords(null); }
                 }}
               />
             </>

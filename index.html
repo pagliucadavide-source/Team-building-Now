@@ -6854,7 +6854,16 @@ function PlayerGameView({ game, onBack }) {
                   };
                   const newScores = [...scores, entry];
                   setScores(newScores);
-                  saveScore(newScores);
+                  // Salva scores e progress per sincronizzazione squadra
+                  try {
+                    await storage.set(`scores:${game.id}:${playerCode}`, JSON.stringify({
+                      playerCode, playerName,
+                      gameId: game.id, gameName: game.name,
+                      scores: newScores,
+                      total: newScores.reduce((s, e) => s + e.score, 0),
+                      completedAt: new Date().toISOString(),
+                    }));
+                  } catch {}
                   try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
                   if (isLast) setPhase("complete");
                   else {
@@ -6880,7 +6889,16 @@ function PlayerGameView({ game, onBack }) {
                   const entry = { idx: enigmaIdx, title: enigma.title || "Enigma AgentX", score, elapsed, expired: false };
                   const newScores = [...scores, entry];
                   setScores(newScores);
-                  saveScore(newScores);
+                  // Salva scores e progress per sincronizzazione squadra
+                  try {
+                    await storage.set(`scores:${game.id}:${playerCode}`, JSON.stringify({
+                      playerCode, playerName,
+                      gameId: game.id, gameName: game.name,
+                      scores: newScores,
+                      total: newScores.reduce((s, e) => s + e.score, 0),
+                      completedAt: new Date().toISOString(),
+                    }));
+                  } catch {}
                   try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
                   if (isLast) setPhase("complete");
                   else {

@@ -1537,7 +1537,7 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
       const clean = raw.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
       if (parsed.punteggio) {
-        snapScoresRef.current.push({ snap: snapIndex, punteggio: parsed.punteggio, nota: parsed.nota || "" });
+        snapScoresRef.current.push({ snap: snapIndex, punteggio: parsed.punteggio, nota: parsed.nota || "", base64 });
       }
     } catch(e) {
       // silent fail — snapshot is best-effort
@@ -2502,87 +2502,159 @@ function FormativeReportModal({ scoreData, agentLogData, game, onClose }) {
   const generateReport = async () => {
     setLoading(true); setError(null);
     try {
-      // Build context from scores and agentX log
-      const scoresText = (scoreData?.scores || []).map((s, i) => {
-        let line = `Enigma ${i+1} "${s.title}": `;
+      const scores      = scoreData?.scores || [];
+      const agentLog    = agentLogData?.log || [];
+      const totalScore  = scoreData?.total ?? 0;
+      const playerName  = scoreData?.playerName || agentLogData?.playerName || "Team";
+      const playerCode  = scoreData?.playerCode || agentLogData?.playerCode || "—";
+      const gameName    = scoreData?.gameName   || agentLogData?.gameName   || game?.name || "—";
+      const enigmaCount = game?.enigmas?.length || 0;
+
+      // ── BLOCCO: dati insufficienti ────────────────────────────────────
+      if (scores.length === 0) {
+        setError("⚠️ Nessun enigma completato — il report sarà disponibile solo al termine della missione.");
+        setLoading(false);
+        return;
+      }
+      if (scores.length < enigmaCount) {
+        setError(`⚠️ Missione non ancora completata (${scores.length}/${enigmaCount} enigmi risolti). Il report sarà disponibile solo al termine.`);
+        setLoading(false);
+        return;
+      }
+
+      // ── COSTRUZIONE DATI DETTAGLIATI ─────────────────────────────────
+      const totalElapsed = scores.reduce((s, e) => s + (e.elapsed || 0), 0);
+      const avgTime = scores.length ? Math.round(totalElapsed / scores.length) : 0;
+      const maxScore = enigmaCount * 10;
+
+      // Raccoglie tutti gli snapshot con base64 da tutte le sfide video
+      const allSnapshots = scores.flatMap(s =>
+        (s.videoSnapshots || []).filter(sn => sn.base64).map(sn => ({
+          ...sn,
+          enigmaTitle: s.title,
+        }))
+      );
+
+      // Dettaglio per enigma
+      const scoresText = scores.map((s, i) => {
         if (s.isVideo) {
-          line += `SFIDA VIDEO — punteggio AI ${s.score}/10, obiettivo ${s.videoObiettivoRaggiunto ? "raggiunto" : "non raggiunto"}`;
-          if (s.videoFeedback) line += `\n  Feedback: ${s.videoFeedback}`;
+          const snaps = s.videoSnapshots || [];
+          const snapDetails = snaps.map(sn =>
+            `    Scatto ${sn.snap}: ${sn.punteggio}/10 — ${sn.nota}`
+          ).join("\n");
+          return `Enigma ${i+1} "${s.title}" [SFIDA VIDEO]:
+  - Punteggio AI: ${s.score}/10
+  - Obiettivo: ${s.videoObiettivoRaggiunto ? "RAGGIUNTO ✓" : "NON RAGGIUNTO ✗"}
+  - Feedback AI: ${s.videoFeedback || "nessuno"}
+  - Valutazione obiettivi: ${s.videoValutazioneObiettivi || "n/d"}
+  - Snapshot analizzati: ${snaps.length} (${snaps.filter(sn=>sn.base64).length} con immagine)
+  - Punteggio visivo medio: ${s.videoPunteggioVisivo ? s.videoPunteggioVisivo + "/10" : "n/d"}
+${snapDetails ? "  Dettaglio scatti:\n" + snapDetails : ""}`;
         } else {
-          line += `risolto in ${Math.floor(s.elapsed/60)}:${String(s.elapsed%60).padStart(2,"0")}, punteggio ${s.score}/10${s.expired ? " (tempo scaduto)" : ""}`;
+          const mins = Math.floor((s.elapsed||0)/60);
+          const secs = String((s.elapsed||0)%60).padStart(2,"0");
+          const hints = s.hintsUsed || 0;
+          return `Enigma ${i+1} "${s.title}":
+  - Tempo impiegato: ${mins}:${secs} ${s.expired ? "(tempo SCADUTO)" : ""}
+  - Punteggio: ${s.score}/10
+  - Suggerimenti usati: ${hints} ${hints > 0 ? `(-${hints*2} punti)` : "(nessuno)"}`;
         }
-        return line;
-      }).join("\n");
+      }).join("\n\n");
 
-      const agentQuestions = (agentLogData?.log || []).filter(m => m.text).map((m, i) =>
-        `[${m.enigmaTitle || "generale"}] "${m.text}"`
-      ).join("\n");
+      // Interazioni AgentX
+      const agentByEnigma = {};
+      agentLog.filter(m => m.role === "user" && m.text).forEach(m => {
+        const key = m.enigmaTitle || "Generale";
+        if (!agentByEnigma[key]) agentByEnigma[key] = [];
+        agentByEnigma[key].push(m.text);
+      });
+      const agentText = Object.keys(agentByEnigma).length === 0
+        ? "Nessuna interazione con AgentX"
+        : Object.entries(agentByEnigma).map(([title, qs]) =>
+            `[${title}] ${qs.length} domande:\n` + qs.map(q => `  • "${q}"`).join("\n")
+          ).join("\n\n");
 
-      const totalScore = scoreData?.total ?? "N/A";
-      const maxScore   = (scoreData?.scores?.length || 0) * 10;
-      const playerCode = scoreData?.playerCode || agentLogData?.playerCode || "—";
-      const playerName = scoreData?.playerName || agentLogData?.playerName || "Team";
-      const gameName   = scoreData?.gameName   || agentLogData?.gameName   || game?.name || "—";
+      const totalAgentQuestions = agentLog.filter(m => m.role === "user").length;
 
-      // ── CALL 1: narrative report (unchanged original) ─────────────────
-      const prompt = `Sei un esperto di team building e sviluppo organizzativo. Hai supervisionato una sessione di escape game formativo chiamata "${gameName}" per il gruppo con codice "${playerCode}" (${playerName}).
+      // ── PROMPT REPORT ────────────────────────────────────────────────
+      const prompt = `Sei un esperto di team building e sviluppo organizzativo. Hai analizzato una sessione di escape game formativo chiamata "${gameName}" completata dal gruppo "${playerName}" (codice: ${playerCode}).
 
-Ecco i dati raccolti durante la sessione:
+════ DATI REALI DELLA SESSIONE ════
 
-PRESTAZIONI PER ENIGMA:
-${scoresText || "Nessun dato di punteggio disponibile"}
+RIEPILOGO:
+- Enigmi completati: ${scores.length}/${enigmaCount}
+- Punteggio totale: ${totalScore}/${maxScore} punti (${Math.round(totalScore/maxScore*100)}%)
+- Tempo medio per enigma: ${Math.floor(avgTime/60)}:${String(avgTime%60).padStart(2,"0")}
+- Richieste di aiuto ad AgentX: ${totalAgentQuestions} in totale
 
-PUNTEGGIO TOTALE: ${totalScore} su ${maxScore} punti
+DETTAGLIO ENIGMI:
+${scoresText}
 
-DOMANDE E RICHIESTE DI AIUTO AD AGENTX (l'assistente IA durante il gioco):
-${agentQuestions || "Nessuna domanda posta ad AgentX"}
+INTERAZIONI CON AGENTX (assistente IA):
+${agentText}
 
-In base a questi dati, scrivi un REPORT FORMATIVO in italiano. Il report deve:
-1. Avere un titolo e una valutazione generale del team (max 2 righe)
-2. Analizzare la COLLABORAZIONE: come si sono organizzati, divisione dei ruoli, sincronizzazione
-3. Analizzare la GESTIONE DEL TEMPO: velocità di risposta, pressione del timer, efficienza
-4. Analizzare la MODALITÀ DI PROBLEM SOLVING: approccio autonomo vs. richiesta di aiuto, tipo di domande fatte
-5. PUNTI DI FORZA del team (2-3 bullet)
-6. AREE DI MIGLIORAMENTO (2-3 bullet)
-7. RACCOMANDAZIONE FORMATIVA: un'attività o workshop specifico da suggerire per rafforzare le aree deboli
+════ ISTRUZIONI PER IL REPORT ════
+Scrivi un REPORT FORMATIVO professionale in italiano basato ESCLUSIVAMENTE sui dati sopra.
+NON inventare comportamenti, dinamiche o valutazioni non supportate dai dati.
 
-Tono: professionale ma accessibile. Lunghezza: 400-600 parole. Non inventare dati che non hai — se mancano informazioni, basati su ciò che hai.`;
+Struttura richiesta:
+1. **TITOLO E VALUTAZIONE SINTETICA** — una riga con voto complessivo
+2. **GESTIONE DEL TEMPO** — analisi dei tempi per enigma, confronto tra enigmi, pressione del timer
+3. **APPROCCIO AL PROBLEM SOLVING** — autonomia vs. richiesta aiuto, pattern nelle domande ad AgentX
+4. **PERFORMANCE NELLE SFIDE VIDEO** — se presenti: analisi obiettivi raggiunti, qualità visiva
+5. **USO DEI SUGGERIMENTI** — se usati: cosa rivela sulla strategia del team
+6. **PUNTI DI FORZA** — 2-3 elementi concreti supportati dai dati
+7. **AREE DI MIGLIORAMENTO** — 2-3 elementi concreti
+8. **RACCOMANDAZIONE FORMATIVA** — una proposta specifica per questo team
+
+Tono: professionale, diretto, basato su evidenze. Lunghezza: 500-700 parole.
+Se un dato non è disponibile, ometti quella sezione invece di inventare.
+
+${allSnapshots.length > 0 ? `IMPORTANTE — ANALISI VISIVA:\nSono allegate ${allSnapshots.length} foto scattate durante le sfide video. Per ogni foto analizza postura del gruppo, espressioni facciali, dinamica di squadra, livello di coinvolgimento. Inserisci questa analisi nella sezione sfide video.` : ""}`;
 
       const apiCall = (body) => fetch("/api/openai", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: "gpt-4o", ...body }),
       });
 
-      const r1 = await apiCall({ max_tokens: 1200, messages: [{ role: "user", content: prompt }] });
+      // Build message content — text + images if snapshots available
+      const msgContent = allSnapshots.length > 0 ? [
+        { type: "text", text: prompt },
+        ...allSnapshots.slice(0, 6).map((sn, i) => ({
+          type: "image_url",
+          image_url: { url: `data:image/jpeg;base64,${sn.base64}`, detail: "low" }
+        }))
+      ] : prompt;
+
+      const r1 = await apiCall({ max_tokens: 1600, messages: [{ role: "user", content: msgContent }] });
       const d1 = await r1.json();
       if (!r1.ok) throw new Error(d1.error?.message || `HTTP ${r1.status}`);
       setReport(d1.content?.find(c => c.type === "text")?.text || "");
 
-      // ── CALL 2: structured table only ─────────────────────────────────
-      const tablePrompt = `Stai analizzando una sessione di escape game formativo.
+      // ── TABELLA PARAMETRI (solo se dati sufficienti) ──────────────────
+      const tablePrompt = `Analizza questa sessione di escape game formativo e restituisci SOLO un array JSON valido.
 
-Dati disponibili:
-- Enigmi: ${scoresText || "N/D"}
-- Punteggio: ${totalScore}/${maxScore}
-- Domande fatte all'IA: ${agentQuestions || "Nessuna"}
+Dati:
+- Punteggio: ${totalScore}/${maxScore} (${Math.round(totalScore/maxScore*100)}%)
+- Tempo medio enigma: ${Math.floor(avgTime/60)}:${String(avgTime%60).padStart(2,"0")}
+- Domande ad AgentX: ${totalAgentQuestions}
+- Suggerimenti usati: ${scores.reduce((s,e)=>s+(e.hintsUsed||0),0)}
+- Enigmi video completati: ${scores.filter(s=>s.isVideo && s.videoObiettivoRaggiunto).length}/${scores.filter(s=>s.isVideo).length}
 
-Rispondi SOLO con un array JSON valido (nessun testo fuori dal JSON):
+Rispondi SOLO con questo array JSON (nessun testo fuori):
 [
-  { "parametro": "Punti di forza", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Punti di debolezza", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Comunicazione interna", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Gestione del tempo", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Problem solving", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Autonomia decisionale", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Uso delle risorse IA", "voto": <numero 1-10>, "dettaglio": "<frase breve>" },
-  { "parametro": "Coesione del team", "voto": <numero 1-10>, "dettaglio": "<frase breve>" }
-]
-Inferisci i voti dai dati. Non inventare.`;
+  { "parametro": "Problem Solving", "voto": <1-10>, "dettaglio": "<frase breve basata sui dati>" },
+  { "parametro": "Gestione del Tempo", "voto": <1-10>, "dettaglio": "<frase breve>" },
+  { "parametro": "Autonomia", "voto": <1-10>, "dettaglio": "<frase breve>" },
+  { "parametro": "Uso Risorse IA", "voto": <1-10>, "dettaglio": "<frase breve>" },
+  { "parametro": "Performance Video", "voto": <1-10>, "dettaglio": "<frase breve o N/A se no video>" },
+  { "parametro": "Efficienza", "voto": <1-10>, "dettaglio": "<frase breve>" },
+  { "parametro": "Coesione Team", "voto": <1-10>, "dettaglio": "<inferita dai pattern>" },
+  { "parametro": "Punteggio Globale", "voto": <1-10>, "dettaglio": "<sintesi complessiva>" }
+]`;
 
-      const r2 = await apiCall({ max_tokens: 600, messages: [{ role: "user", content: tablePrompt }] });
+      const r2 = await apiCall({ max_tokens: 700, messages: [{ role: "user", content: tablePrompt }] });
       const d2 = await r2.json();
       if (r2.ok) {
         try {
@@ -3512,20 +3584,31 @@ function AdminDashboard({ games, adminPassword, onEdit, onNewGame, onNewGameFrom
                     <span style={{ fontFamily: G.fontMono, fontSize: "10px", color: i === 0 ? G.gold : G.muted, letterSpacing: "1px" }}>{p.name}</span>
                     <span style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.text, letterSpacing: "3px" }}>{p.code}</span>
                   </div>
-                  <button
-                    onClick={() => openReport(g, p)}
-                    style={{
-                      fontFamily: G.fontMono, fontSize: "10px", letterSpacing: "1px",
-                      background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.35)",
-                      borderRadius: "6px", padding: "5px 12px", cursor: "pointer",
-                      color: G.gold, whiteSpace: "nowrap", transition: "all 0.15s",
-                      display: "flex", alignItems: "center", gap: "5px",
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(201,168,76,0.22)"; e.currentTarget.style.borderColor = G.gold; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(201,168,76,0.12)"; e.currentTarget.style.borderColor = "rgba(201,168,76,0.35)"; }}
-                  >
-                    📊 Report IA
-                  </button>
+                  {(() => {
+                    const ps = allScores.find(s => s.playerCode === p.code && s.gameId === g.id);
+                    const completed = ps && (ps.scores?.length || 0) >= (g.enigmas?.length || 1);
+                    return completed ? (
+                      <button
+                        onClick={() => openReport(g, p)}
+                        style={{
+                          fontFamily: G.fontMono, fontSize: "10px", letterSpacing: "1px",
+                          background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.35)",
+                          borderRadius: "6px", padding: "5px 12px", cursor: "pointer",
+                          color: G.gold, whiteSpace: "nowrap", transition: "all 0.15s",
+                          display: "flex", alignItems: "center", gap: "5px",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(201,168,76,0.22)"; e.currentTarget.style.borderColor = G.gold; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "rgba(201,168,76,0.12)"; e.currentTarget.style.borderColor = "rgba(201,168,76,0.35)"; }}
+                      >
+                        📊 Report IA
+                      </button>
+                    ) : (
+                      <span style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.muted,
+                        padding: "5px 8px", letterSpacing: "1px" }}>
+                        🔒 report al termine
+                      </span>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

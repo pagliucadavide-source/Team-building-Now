@@ -6689,6 +6689,14 @@ function PlayerGameView({ game, onBack }) {
                   className="btn-gold"
                   style={{ ...styles.btnPrimary, width: "100%", padding: "12px" }}
                   onClick={async () => {
+                    // Legge gli score già salvati (dal compagno) e li sincronizza localmente
+                    try {
+                      const sr = await storage.get(`scores:${game.id}:${playerCode}`);
+                      if (sr?.value) {
+                        const saved = JSON.parse(sr.value);
+                        if (saved.scores?.length) setScores(saved.scores);
+                      }
+                    } catch {}
                     setTeamNotify(false);
                     stopGeo();
                     unlockedRef.current = false;
@@ -6771,6 +6779,14 @@ function PlayerGameView({ game, onBack }) {
                 className="btn-gold"
                 style={{ ...styles.btnPrimary, width: "100%", padding: "12px" }}
                 onClick={async () => {
+                  // Legge gli score già salvati (dal compagno) e li sincronizza localmente
+                  try {
+                    const sr = await storage.get(`scores:${game.id}:${playerCode}`);
+                    if (sr?.value) {
+                      const saved = JSON.parse(sr.value);
+                      if (saved.scores?.length) setScores(saved.scores);
+                    }
+                  } catch {}
                   setTeamNotify(false);
                   stopGeo();
                   unlockedRef.current = false;

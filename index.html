@@ -5843,9 +5843,14 @@ function PlayerGameView({ game, onBack }) {
         const res = await storage.get(`progress:${game.id}:${playerCode}`);
         if (!res?.value) return;
         const savedIdx = parseInt(res.value, 10);
-        if (!isNaN(savedIdx) && savedIdx > 0 && savedIdx < game.enigmas.length) {
+        if (isNaN(savedIdx)) return;
+        if (savedIdx > 0 && savedIdx < game.enigmas.length) {
+          // progresso valido: riprendi dall'enigma salvato
           setEnigmaIdx(savedIdx);
           setPhase("enigma");
+        } else if (savedIdx >= game.enigmas.length) {
+          // progresso residuo oltre la fine: resetta e ricomincia da 0
+          try { await storage.set(`progress:${game.id}:${playerCode}`, "0"); } catch {}
         }
       } catch {}
     })();
@@ -6055,7 +6060,8 @@ function PlayerGameView({ game, onBack }) {
         const remoteIdx = parseInt(res.value, 10);
         if (isNaN(remoteIdx)) return;
         // Avanza solo se il progresso remoto è maggiore di quello locale
-        if (remoteIdx > enigmaIdx) {
+        // e se l'indice è valido per questo gioco (evita crash con dati residui)
+        if (remoteIdx > enigmaIdx && remoteIdx < game.enigmas.length) {
           setEnigmaIdx(remoteIdx);
           setPhase("enigma");
           setAnswer(""); setError("");

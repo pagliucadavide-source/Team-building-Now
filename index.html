@@ -6499,10 +6499,29 @@ function PlayerGameView({ game, onBack }) {
                   <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "conic-gradient(from 0deg, transparent 70%, rgba(192,57,43,0.4) 100%)", animation: "spin 2s linear infinite" }} />
                 </div>
 
-                <h2 style={{ ...styles.title, fontSize: "22px", marginBottom: "8px", color: "#e05555" }}>DESTINAZIONE NON RAGGIUNTA</h2>
+                <h2 style={{ ...styles.title, fontSize: "22px", marginBottom: "8px",
+                  color: geoStatus === "near" ? "#2ecc71" : "#e05555" }}>
+                  {geoStatus === "near" ? "SEI IN ZONA ✓" : "DESTINAZIONE NON RAGGIUNTA"}
+                </h2>
                 <p style={{ color: G.muted, fontFamily: G.fontMono, fontSize: "13px", marginBottom: "20px" }}>
-                  L'enigma si sbloccherà automaticamente<br />quando sarai entro {GEO_RADIUS} metri dal punto
+                  {geoStatus === "near"
+                    ? "Premi il pulsante per iniziare la missione"
+                    : `Raggiungi il punto entro ${GEO_RADIUS} metri, poi premi il pulsante`}
                 </p>
+                {geoStatus === "near" && (
+                  <button className="btn-gold"
+                    style={{ ...styles.btnPrimary, padding: "16px 48px", fontSize: "18px",
+                      background: "linear-gradient(135deg,#2ed573,#27ae60)",
+                      borderColor: "#2ed573", width: "100%", marginBottom: "16px" }}
+                    onClick={() => {
+                      unlockedRef.current = true;
+                      setUnlockedState(true);
+                      setEnigmaStartTime(Date.now());
+                      setTimerExpired(false);
+                    }}>
+                    🔓 INIZIA MISSIONE
+                  </button>
+                )}
 
                 {/* Distance badge */}
                 {distance !== null && (

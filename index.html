@@ -1458,7 +1458,6 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
   const timerRef      = useRef(null);
   const snapTimerRef  = useRef(null);
   const snapScoresRef = useRef([]);
-  const geoVerifiedRef = useRef(false); // true quando GPS post ha già confermato la posizione
   const maxSec        = enigma.recordingSeconds || 120;
 
   // Open camera immediately on mount
@@ -1538,7 +1537,7 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
       const clean = raw.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
       if (parsed.punteggio) {
-        snapScoresRef.current.push({ snap: snapIndex, punteggio: parsed.punteggio, nota: parsed.nota || "", base64 });
+        snapScoresRef.current.push({ snap: snapIndex, punteggio: parsed.punteggio, nota: parsed.nota || "" });
       }
     } catch(e) {
       // silent fail — snapshot is best-effort
@@ -2993,38 +2992,6 @@ Inferisci i voti dai dati. Non inventare.`;
 
               {/* Narrative text (original report, untouched) */}
               {renderReport(report)}
-
-              {/* ── GALLERIA FOTO VIDEO ── */}
-              {(scoreData?.scores || []).some(s => s.isVideo && (s.videoSnapshots||[]).some(sn=>sn.base64)) && (
-                <div style={{ marginTop:"32px", paddingTop:"20px", borderTop:"1px solid "+G.border }}>
-                  <div style={{ fontFamily:G.fontMono, fontSize:"11px", color:G.muted, letterSpacing:"3px", marginBottom:"20px" }}>📹 ANALISI PROVE VIDEO</div>
-                  {(scoreData?.scores||[]).filter(s=>s.isVideo).map((s,vi)=>{
-                    const photos=(s.videoSnapshots||[]).filter(sn=>sn.base64);
-                    if(!photos.length) return null;
-                    return (
-                      <div key={vi} style={{ marginBottom:"24px", padding:"16px 20px", border:"1px solid rgba(201,168,76,0.2)", borderRadius:"8px", background:"rgba(201,168,76,0.03)" }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"14px", paddingBottom:"10px", borderBottom:"1px solid "+G.border }}>
-                          <div style={{ fontFamily:G.fontMono, fontSize:"10px", color:G.gold, letterSpacing:"3px" }}>📹 PROVA VIDEO {vi+1}</div>
-                          <div style={{ fontFamily:G.fontMono, fontSize:"12px", color:G.text, flex:1 }}>{s.title}</div>
-                          <div style={{ fontFamily:G.fontMono, fontSize:"20px", color:G.gold, fontWeight:"bold" }}>{s.score}<span style={{ fontSize:"11px", color:G.muted }}>/10</span></div>
-                        </div>
-                        <div style={{ fontFamily:G.fontMono, fontSize:"9px", color:"#29b6f6", letterSpacing:"2px", marginBottom:"10px" }}>📸 {photos.length} SCATTI ANALIZZATI</div>
-                        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:"10px" }}>
-                          {photos.map((sn,pi)=>(
-                            <div key={pi} style={{ borderRadius:"6px", overflow:"hidden", border:"1px solid "+G.border, background:"#0d0d14" }}>
-                              <img src={"data:image/jpeg;base64,"+sn.base64} alt={"Scatto "+sn.snap} style={{ width:"100%", display:"block", aspectRatio:"4/3", objectFit:"cover" }} />
-                              <div style={{ padding:"6px 8px" }}>
-                                <div style={{ fontFamily:G.fontMono, fontSize:"9px", color:G.gold }}>Scatto {sn.snap} — {sn.punteggio}/10</div>
-                                <div style={{ fontFamily:G.fontMono, fontSize:"9px", color:G.muted, marginTop:"3px", lineHeight:"1.4" }}>{sn.nota}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
 
               {/* ── TABELLA RIEPILOGATIVA ── */}
               {scoreTable?.tabella?.length > 0 && (
@@ -5818,7 +5785,6 @@ function PlayerGameView({ game, onBack }) {
 
   const enigma = game.enigmas[enigmaIdx];
   const isLast = enigmaIdx === game.enigmas.length - 1;
-  if (!enigma) { setPhase("complete"); return null; }
 
   // Stop all geo watchers
   const stopGeo = useCallback(() => {
@@ -5844,14 +5810,9 @@ function PlayerGameView({ game, onBack }) {
         const res = await storage.get(`progress:${game.id}:${playerCode}`);
         if (!res?.value) return;
         const savedIdx = parseInt(res.value, 10);
-        if (isNaN(savedIdx)) return;
-        if (savedIdx > 0 && savedIdx < game.enigmas.length) {
-          // progresso valido: riprendi dall'enigma salvato
+        if (!isNaN(savedIdx) && savedIdx > 0 && savedIdx < game.enigmas.length) {
           setEnigmaIdx(savedIdx);
           setPhase("enigma");
-        } else if (savedIdx >= game.enigmas.length) {
-          // progresso residuo oltre la fine: resetta e ricomincia da 0
-          try { await storage.set(`progress:${game.id}:${playerCode}`, "0"); } catch {}
         }
       } catch {}
     })();
@@ -5877,7 +5838,11 @@ function PlayerGameView({ game, onBack }) {
 
     if (dm <= GEO_RADIUS) {
       if (!unlockedRef.current) {
-        setGeoStatus("near");  // solo segnala vicinanza, NON sblocca
+        unlockedRef.current = true;
+        setUnlockedState(true);
+        setGeoStatus("near");
+        setEnigmaStartTime(Date.now());
+        setTimerExpired(false);
       }
     } else {
       if (!unlockedRef.current) {
@@ -6023,18 +5988,6 @@ function PlayerGameView({ game, onBack }) {
 
     const coords = getCoords();
 
-    // GPS già verificato nella fase post precedente — sblocca subito
-    if (geoVerifiedRef.current) {
-      geoVerifiedRef.current = false; // reset per enigmi successivi
-      unlockedRef.current = true;
-      setUnlockedState(true);
-      setGeoStatus("near");
-      setDistance(null);
-      setEnigmaStartTime(Date.now());
-      setTimerExpired(false);
-      return;
-    }
-
     // No GPS coordinates configured for this enigma — unlock immediately, skip GPS entirely
     if (!coords) {
       unlockedRef.current = true;
@@ -6069,8 +6022,7 @@ function PlayerGameView({ game, onBack }) {
         const remoteIdx = parseInt(res.value, 10);
         if (isNaN(remoteIdx)) return;
         // Avanza solo se il progresso remoto è maggiore di quello locale
-        // e se l'indice è valido per questo gioco (evita crash con dati residui)
-        if (remoteIdx > enigmaIdx && remoteIdx < game.enigmas.length) {
+        if (remoteIdx > enigmaIdx) {
           setEnigmaIdx(remoteIdx);
           setPhase("enigma");
           setAnswer(""); setError("");
@@ -6118,13 +6070,12 @@ function PlayerGameView({ game, onBack }) {
     }
   };
 
-  const nextEnigma = async (gpsAlreadyVerified = false) => {
+  const nextEnigma = async () => {
     stopGeo();
     unlockedRef.current = false;
     setUnlockedState(false);
     setDistance(null);
     setGeoStatus("idle");
-    geoVerifiedRef.current = gpsAlreadyVerified; // se GPS post ha già confermato, salta il check
     if (isLast) { setPhase("complete"); }
     else {
       setEnigmaIdx((i) => i + 1);
@@ -6509,29 +6460,10 @@ function PlayerGameView({ game, onBack }) {
                   <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "conic-gradient(from 0deg, transparent 70%, rgba(192,57,43,0.4) 100%)", animation: "spin 2s linear infinite" }} />
                 </div>
 
-                <h2 style={{ ...styles.title, fontSize: "22px", marginBottom: "8px",
-                  color: geoStatus === "near" ? "#2ecc71" : "#e05555" }}>
-                  {geoStatus === "near" ? "SEI IN ZONA ✓" : "DESTINAZIONE NON RAGGIUNTA"}
-                </h2>
+                <h2 style={{ ...styles.title, fontSize: "22px", marginBottom: "8px", color: "#e05555" }}>DESTINAZIONE NON RAGGIUNTA</h2>
                 <p style={{ color: G.muted, fontFamily: G.fontMono, fontSize: "13px", marginBottom: "20px" }}>
-                  {geoStatus === "near"
-                    ? "Premi il pulsante per iniziare la missione"
-                    : `Raggiungi il punto entro ${GEO_RADIUS} metri, poi premi il pulsante`}
+                  L'enigma si sbloccherà automaticamente<br />quando sarai entro {GEO_RADIUS} metri dal punto
                 </p>
-                {geoStatus === "near" && (
-                  <button className="btn-gold"
-                    style={{ ...styles.btnPrimary, padding: "16px 48px", fontSize: "18px",
-                      background: "linear-gradient(135deg,#2ed573,#27ae60)",
-                      borderColor: "#2ed573", width: "100%", marginBottom: "16px" }}
-                    onClick={() => {
-                      unlockedRef.current = true;
-                      setUnlockedState(true);
-                      setEnigmaStartTime(Date.now());
-                      setTimerExpired(false);
-                    }}>
-                    🔓 INIZIA MISSIONE
-                  </button>
-                )}
 
                 {/* Distance badge */}
                 {distance !== null && (
@@ -6899,7 +6831,7 @@ function PlayerGameView({ game, onBack }) {
                       className="btn-gold"
                       style={{ ...styles.btnPrimary, padding: "14px 36px", fontSize: "16px",
                         background: "linear-gradient(135deg,#2ed573,#27ae60)", borderColor: "#2ed573" }}
-                      onClick={() => nextEnigma(true)}
+                      onClick={nextEnigma}
                     >
                       🔓 SBLOCCA ENIGMA
                     </button>

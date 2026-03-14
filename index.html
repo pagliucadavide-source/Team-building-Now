@@ -5758,6 +5758,7 @@ function PlayerGameView({ game, onBack }) {
   const [geoStatus, setGeoStatus] = useState("idle");
   const [distance, setDistance] = useState(null);
   const [freshNextCoords, setFreshNextCoords] = useState(null);
+  const [teamNotify, setTeamNotify] = useState(false);
   const [agentOpen, setAgentOpen] = useState(false);
   const [enigmaStartTime, setEnigmaStartTime] = useState(null);
   const [timerExpired,    setTimerExpired]    = useState(false);
@@ -6036,6 +6037,25 @@ function PlayerGameView({ game, onBack }) {
     return () => clearInterval(poll);
   }, [phase, enigmaIdx, playerCode, game.id]);
 
+  useEffect(() => {
+    if (phase === "complete" || phase === "cinematic" || phase === "intro") return;
+    const progressKey = `progress:${game.id}:${playerCode}`;
+    const poll = setInterval(async () => {
+      try {
+        const res = await storage.get(progressKey);
+        if (!res?.value) return;
+        const remoteIdx = parseInt(res.value, 10);
+        if (isNaN(remoteIdx)) return;
+        if (remoteIdx > enigmaIdx && remoteIdx < game.enigmas.length) {
+          setTeamNotify(remoteIdx);
+        } else if (remoteIdx >= game.enigmas.length && enigmaIdx >= game.enigmas.length - 1) {
+          setPhase("complete");
+        }
+      } catch {}
+    }, 5000);
+    return () => clearInterval(poll);
+  }, [phase, enigmaIdx, playerCode, game.id]);
+
   const checkAnswer = async () => {
     if (answer.trim().toLowerCase() === (enigma.answer || "").trim().toLowerCase()) {
       // Calculate score
@@ -6057,6 +6077,7 @@ function PlayerGameView({ game, onBack }) {
         }));
       } catch {}
 
+      try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
       setPhase("post");
       setDistance(null);
       setFreshNextCoords(null);
@@ -6546,7 +6567,41 @@ function PlayerGameView({ game, onBack }) {
           )}
 
           {/* Badge "posizione verificata" se si è arrivati via GPS */}
-          {unlockedState && getCoords() && (
+{/* ── NOTIFICA SQUADRA ── */}
+          {teamNotify !== false && teamNotify > enigmaIdx && (
+            <div style={{ ...styles.card, marginBottom:"16px", padding:"16px 20px",
+              background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.5)",
+              borderRadius:"10px" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"12px" }}>
+                <span style={{ fontSize:"28px" }}>🤝</span>
+                <div>
+                  <div style={{ fontFamily:G.fontMono, fontSize:"11px", color:G.gold, letterSpacing:"2px", marginBottom:"3px" }}>SQUADRA IN AVANTI</div>
+                  <div style={{ fontFamily:G.fontMono, fontSize:"12px", color:G.text }}>Un membro del team ha già completato questo enigma</div>
+                </div>
+              </div>
+              <button className="btn-gold" style={{ ...styles.btnPrimary, width:"100%", padding:"12px" }}
+                onClick={async () => {
+                    let syncedScores = scores;
+                    try {
+                      const sr = await storage.get(`scores:${game.id}:${playerCode}`);
+                      if (sr?.value) {
+                        const saved = JSON.parse(sr.value);
+                        if (saved.scores?.length) { syncedScores = saved.scores; setScores(saved.scores); }
+                      }
+                    } catch {}
+                    setTeamNotify(false); stopGeo();
+                    unlockedRef.current = false; setUnlockedState(false);
+                    setDistance(null); setGeoStatus("idle");
+                    setAnswer(""); setError(""); setFreshNextCoords(null);
+                    if (teamNotify >= game.enigmas.length) { setPhase("complete"); }
+                    else { setEnigmaIdx(teamNotify); setPhase("enigma"); }
+                  }}>
+                → PROCEDI CON IL TEAM
+              </button>
+            </div>
+          )}
+
+                    {unlockedState && getCoords() && (
             <div style={{ ...styles.card, marginBottom: "16px", padding: "10px 16px", background: "rgba(46,204,113,0.07)", border: `1px solid rgba(46,204,113,0.3)`, display: "flex", alignItems: "center", gap: "10px" }}>
               <span style={{ fontSize: "18px" }}>✅</span>
               <span style={{ fontFamily: G.fontMono, fontSize: "12px", color: G.success, letterSpacing: "1px" }}>POSIZIONE VERIFICATA — Enigma sbloccato{distance !== null ? ` (${distance}m)` : ""}</span>
@@ -6554,6 +6609,49 @@ function PlayerGameView({ game, onBack }) {
           )}
 
 
+
+          {/* ── OVERLAY SQUADRA sopra VideoChallenge ── */}
+          {teamNotify !== false && teamNotify > enigmaIdx && enigma.type === "video-challenge" && (
+            <div style={{
+              position: "fixed", inset: 0, zIndex: 9999,
+              background: "rgba(0,0,0,0.88)", backdropFilter: "blur(6px)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "24px",
+            }}>
+              <div style={{ maxWidth: "420px", width: "100%", ...styles.card,
+                border: "1px solid rgba(201,168,76,0.6)",
+                boxShadow: "0 0 60px rgba(201,168,76,0.2)", textAlign: "center", padding: "32px 24px" }}>
+                <div style={{ fontSize: "52px", marginBottom: "12px" }}>🤝</div>
+                <div style={{ fontFamily: G.fontMono, fontSize: "13px", color: G.gold,
+                  letterSpacing: "3px", marginBottom: "10px" }}>SFIDA COMPLETATA DAL TEAM</div>
+                <div style={{ fontFamily: "'Crimson Text',Georgia,serif", fontSize: "16px",
+                  color: G.text, lineHeight: "1.7", marginBottom: "24px" }}>
+                  Un membro del team ha completato la sfida video.<br/>
+                  Puoi procedere senza ripetere la prova.
+                </div>
+                <button className="btn-gold"
+                  style={{ ...styles.btnPrimary, width: "100%", padding: "14px", fontSize: "16px" }}
+                  onClick={async () => {
+                    let syncedScores = scores;
+                    try {
+                      const sr = await storage.get(`scores:${game.id}:${playerCode}`);
+                      if (sr?.value) {
+                        const saved = JSON.parse(sr.value);
+                        if (saved.scores?.length) { syncedScores = saved.scores; setScores(saved.scores); }
+                      }
+                    } catch {}
+                    setTeamNotify(false); stopGeo();
+                    unlockedRef.current = false; setUnlockedState(false);
+                    setDistance(null); setGeoStatus("idle");
+                    setAnswer(""); setError(""); setFreshNextCoords(null);
+                    if (teamNotify >= game.enigmas.length) { setPhase("complete"); }
+                    else { setEnigmaIdx(teamNotify); setPhase("enigma"); }
+                  }}>
+                  → PROCEDI CON IL TEAM
+                </button>
+              </div>
+            </div>
+          )}
 
           {enigma.type === "video-challenge" ? (
             <div style={{ ...styles.card, marginBottom: "20px", border: "1px solid rgba(192,57,43,0.3)" }}>
@@ -6569,7 +6667,7 @@ function PlayerGameView({ game, onBack }) {
                 enigma={enigma}
                 playerName={playerName}
                 gameName={game.name}
-                onComplete={(evalResult) => {
+                onComplete={async (evalResult) => {
                   const score = evalResult?.punteggio ?? 8;
                   const entry = {
                     idx: enigmaIdx,
@@ -6582,13 +6680,18 @@ function PlayerGameView({ game, onBack }) {
                     videoPunteggioVisivo: evalResult?.punteggio_visivo ?? null,
                     videoSnapshots: evalResult?.snapshots || evalResult?.dettaglio_scatti || [],
                   };
-                  const newScores = [...scores, entry];
+                                    const newScores = [...scores, entry];
                   setScores(newScores);
+                  try {
+                    await storage.set(`scores:${game.id}:${playerCode}`, JSON.stringify({
+                      playerCode, playerName, gameId: game.id, gameName: game.name,
+                      scores: newScores, total: newScores.reduce((s,e)=>s+e.score,0),
+                      completedAt: new Date().toISOString(),
+                    }));
+                  } catch {}
+                  try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
                   if (isLast) setPhase("complete");
-                  else {
-                    setPhase("post"); setDistance(null); setFreshNextCoords(null);
-                    storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)).catch(() => {});
-                  }
+                  else { setPhase("post"); setDistance(null); setFreshNextCoords(null); }
                 }}
               />
             </div>
@@ -6603,18 +6706,22 @@ function PlayerGameView({ game, onBack }) {
               <AgentXEnigmaPlayer
                 game={game}
                 enigma={enigma}
-                onComplete={() => {
+                onComplete={async () => {
                   const elapsed = enigmaStartTime ? Math.floor((Date.now() - enigmaStartTime) / 1000) : 0;
                   const score = Math.max(1, 10 - Math.floor(elapsed / 60));
                   const entry = { idx: enigmaIdx, title: enigma.title || "Enigma AgentX", score, elapsed, expired: false };
                   const newScores = [...scores, entry];
                   setScores(newScores);
-                  saveScore(newScores);
+                  try {
+                    await storage.set(`scores:${game.id}:${playerCode}`, JSON.stringify({
+                      playerCode, playerName, gameId: game.id, gameName: game.name,
+                      scores: newScores, total: newScores.reduce((s,e)=>s+e.score,0),
+                      completedAt: new Date().toISOString(),
+                    }));
+                  } catch {}
+                  try { await storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)); } catch {}
                   if (isLast) setPhase("complete");
-                  else {
-                    setPhase("post"); setDistance(null); setFreshNextCoords(null);
-                    storage.set(`progress:${game.id}:${playerCode}`, String(enigmaIdx + 1)).catch(() => {});
-                  }
+                  else { setPhase("post"); setDistance(null); setFreshNextCoords(null); }
                 }}
               />
             </>

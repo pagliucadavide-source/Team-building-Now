@@ -5790,6 +5790,7 @@ function PlayerGameView({ game, onBack }) {
 
   const enigma = game.enigmas[enigmaIdx];
   const isLast = enigmaIdx === game.enigmas.length - 1;
+  if (!enigma && phase !== "complete") { return null; }
 
   // Stop all geo watchers
   const stopGeo = useCallback(() => {

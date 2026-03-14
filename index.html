@@ -1537,7 +1537,7 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
       const clean = raw.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
       if (parsed.punteggio) {
-        snapScoresRef.current.push({ snap: snapIndex, punteggio: parsed.punteggio, nota: parsed.nota || "" });
+        snapScoresRef.current.push({ snap: snapIndex, punteggio: parsed.punteggio, nota: parsed.nota || "", base64 });
       }
     } catch(e) {
       // silent fail — snapshot is best-effort
@@ -1559,7 +1559,7 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
     // First snap at 10s, then every 60s
     let snapIdx = 0;
     setTimeout(() => { snapIdx++; captureAndEvalSnapshot(snapIdx); }, 10000);
-    snapTimerRef.current = setInterval(() => { snapIdx++; captureAndEvalSnapshot(snapIdx); }, 60000);
+    snapTimerRef.current = setInterval(() => { snapIdx++; captureAndEvalSnapshot(snapIdx); }, 15000);
     timerRef.current = setInterval(() => {
       setElapsed(prev => {
         const next = prev + 1;
@@ -1835,63 +1835,21 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
               <div style={{ fontFamily: G.fontMono, fontSize: "12px", color: "#c0392b" }}>{evalError}</div>
             </div>
           ) : (
-            <div>
-              {/* Score + Goal row */}
-              <div style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
-                <div style={{ flex: 1, ...styles.card, textAlign: "center",
-                  border: "1px solid rgba(201,168,76,0.35)", background: "rgba(201,168,76,0.06)", padding: "20px 12px" }}>
-                  <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.muted, letterSpacing: "2px", marginBottom: "8px" }}>PUNTEGGIO</div>
-                  <div style={{ fontFamily: G.fontMono, fontSize: "36px", color: G.gold, fontWeight: "bold" }}>
-                    {evaluation?.punteggio ?? "—"}<span style={{ fontSize: "16px", color: G.muted }}>/10</span>
-                  </div>
-                </div>
-                <div style={{ flex: 1, ...styles.card, textAlign: "center",
-                  border: evaluation?.obiettivo_raggiunto
-                    ? "1px solid rgba(46,204,113,0.4)" : "1px solid rgba(192,57,43,0.35)",
-                  background: evaluation?.obiettivo_raggiunto
-                    ? "rgba(46,204,113,0.06)" : "rgba(192,57,43,0.06)", padding: "20px 12px" }}>
-                  <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.muted, letterSpacing: "2px", marginBottom: "8px" }}>OBIETTIVO</div>
-                  <div style={{ fontSize: "28px" }}>{evaluation?.obiettivo_raggiunto ? "✅" : "❌"}</div>
-                  <div style={{ fontFamily: G.fontMono, fontSize: "10px", marginTop: "6px",
-                    color: evaluation?.obiettivo_raggiunto ? "#2ecc71" : "#c0392b" }}>
-                    {evaluation?.obiettivo_raggiunto ? "RAGGIUNTO" : "NON RAGGIUNTO"}
-                  </div>
-                </div>
+            <div style={{ ...styles.card, border: "1px solid rgba(46,204,113,0.35)",
+              background: "rgba(46,204,113,0.06)", textAlign: "center", padding: "32px 24px",
+              marginBottom: "16px" }}>
+              <div style={{ fontSize: "48px", marginBottom: "12px" }}>✅</div>
+              <div style={{ fontFamily: G.fontMono, fontSize: "13px", color: "#2ecc71",
+                letterSpacing: "2px", marginBottom: "12px" }}>SFIDA COMPLETATA</div>
+              <div style={{ fontFamily: G.fontMono, fontSize: "42px", color: G.gold,
+                fontWeight: "bold", marginBottom: "4px" }}>
+                {evaluation?.punteggio ?? "—"}<span style={{ fontSize: "18px", color: G.muted }}>/10</span>
               </div>
-
-              {/* Valutazione obiettivi */}
-              {evaluation?.valutazione_obiettivi && (
-                <div style={{ ...styles.card, border: "1px solid rgba(192,57,43,0.25)",
-                  background: "rgba(192,57,43,0.04)", marginBottom: "12px" }}>
-                  <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: "#e8a0a0",
-                    letterSpacing: "2px", marginBottom: "10px" }}>🎯 VALUTAZIONE OBIETTIVI</div>
-                  <div style={{ fontFamily: "'Crimson Text',Georgia,serif", fontSize: "16px",
-                    lineHeight: "1.85", color: G.text }}>
-                    {evaluation.valutazione_obiettivi}
-                  </div>
-                </div>
-              )}
-
-              {/* Feedback formativo */}
-              <div style={{ ...styles.card, border: "1px solid rgba(201,168,76,0.2)",
-                background: "rgba(201,168,76,0.03)", marginBottom: "16px" }}>
-                <div style={{ fontFamily: G.fontMono, fontSize: "9px", color: G.gold,
-                  letterSpacing: "2px", marginBottom: "12px" }}>🤖 FEEDBACK FORMATIVO</div>
-                <div style={{ fontFamily: "'Crimson Text',Georgia,serif", fontSize: "16px",
-                  lineHeight: "1.85", color: G.text }}>
-                  {evaluation?.feedback || ""}
-                </div>
-              </div>
+              <div style={{ fontFamily: "'Crimson Text',Georgia,serif", fontSize: "14px",
+                color: G.muted, marginTop: "8px" }}>La vostra performance è stata registrata.</div>
             </div>
           )}
-          {enigma.postStory ? (
-            <div style={{ ...styles.card, marginBottom: "20px",
-              fontFamily: "'Playfair Display',Georgia,serif",
-              fontSize: "15px", lineHeight: "1.9", fontStyle: "italic", color: G.text }}>
-              <Linkify text={enigma.postStory} />
-            </div>
-          ) : null}
-          <button className="btn-gold" style={{ ...styles.btnPrimary, width: "100%", padding: "16px", fontSize: "14px" }}
+          <button className="btn-gold" style={{ ...styles.btnPrimary, width: "100%", padding: "16px", fontSize: "16px" }}
             onClick={() => onComplete({ ...(evaluation || {}), snapshots: snapScoresRef.current })}>
             CONTINUA →
           </button>
@@ -2992,6 +2950,52 @@ Inferisci i voti dai dati. Non inventare.`;
 
               {/* Narrative text (original report, untouched) */}
               {renderReport(report)}
+
+              {/* ── GALLERIA FOTO VIDEO ── */}
+              {(scoreData?.scores || []).some(s => s.isVideo && (s.videoSnapshots||[]).some(sn=>sn.base64)) && (
+                <div style={{ marginTop:"32px", paddingTop:"20px", borderTop:"1px solid "+G.border }}>
+                  <div style={{ fontFamily:G.fontMono, fontSize:"11px", color:G.muted, letterSpacing:"3px", marginBottom:"20px" }}>📹 ANALISI PROVE VIDEO</div>
+                  {(scoreData?.scores||[]).filter(s=>s.isVideo).map((s,vi)=>{
+                    const photos=(s.videoSnapshots||[]).filter(sn=>sn.base64);
+                    if(!photos.length) return null;
+                    return (
+                      <div key={vi} style={{ marginBottom:"24px", padding:"16px 20px",
+                        border:"1px solid rgba(201,168,76,0.2)", borderRadius:"8px",
+                        background:"rgba(201,168,76,0.03)" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:"12px",
+                          marginBottom:"14px", paddingBottom:"10px", borderBottom:"1px solid "+G.border }}>
+                          <div style={{ fontFamily:G.fontMono, fontSize:"10px", color:G.gold, letterSpacing:"3px" }}>📹 PROVA VIDEO {vi+1}</div>
+                          <div style={{ fontFamily:G.fontMono, fontSize:"12px", color:G.text, flex:1 }}>{s.title}</div>
+                          <div style={{ fontFamily:G.fontMono, fontSize:"20px", color:G.gold, fontWeight:"bold" }}>
+                            {s.score}<span style={{ fontSize:"11px", color:G.muted }}>/10</span>
+                          </div>
+                        </div>
+                        <div style={{ fontFamily:G.fontMono, fontSize:"9px", color:"#29b6f6",
+                          letterSpacing:"2px", marginBottom:"10px" }}>
+                          📸 {photos.length} SCATTI — 1 ogni 15 secondi
+                        </div>
+                        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:"10px" }}>
+                          {photos.map((sn,pi)=>(
+                            <div key={pi} style={{ borderRadius:"6px", overflow:"hidden",
+                              border:"1px solid "+G.border, background:"#0d0d14" }}>
+                              <img src={"data:image/jpeg;base64,"+sn.base64}
+                                alt={"Scatto "+sn.snap}
+                                style={{ width:"100%", display:"block", aspectRatio:"4/3", objectFit:"cover" }} />
+                              <div style={{ padding:"6px 8px" }}>
+                                <div style={{ fontFamily:G.fontMono, fontSize:"9px", color:G.gold }}>
+                                  Scatto {sn.snap} — {sn.punteggio}/10
+                                </div>
+                                <div style={{ fontFamily:G.fontMono, fontSize:"9px", color:G.muted,
+                                  marginTop:"3px", lineHeight:"1.4" }}>{sn.nota}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* ── TABELLA RIEPILOGATIVA ── */}
               {scoreTable?.tabella?.length > 0 && (
@@ -6016,24 +6020,6 @@ function PlayerGameView({ game, onBack }) {
   useEffect(() => {
     if (phase === "complete" || phase === "cinematic" || phase === "intro") return;
     const progressKey = `progress:${game.id}:${playerCode}`;
-    const poll = setInterval(async () => {
-      try {
-        const res = await storage.get(progressKey);
-        if (!res?.value) return;
-        const remoteIdx = parseInt(res.value, 10);
-        if (isNaN(remoteIdx)) return;
-        // Avanza solo se il progresso remoto è maggiore di quello locale
-        if (remoteIdx > enigmaIdx) {
-          setEnigmaIdx(remoteIdx);
-          setPhase("enigma");
-          setAnswer(""); setError("");
-          setDistance(null); setFreshNextCoords(null);
-          setGeoStatus("idle");
-          unlockedRef.current = false;
-          setUnlockedState(false);
-        }
-      } catch {}
-    }, 5000); // controlla ogni 5 secondi
     return () => clearInterval(poll);
   }, [phase, enigmaIdx, playerCode, game.id]);
 

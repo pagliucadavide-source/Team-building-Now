@@ -1458,6 +1458,7 @@ function VideoEnigmaPlayer({ enigma, playerName, gameName, onComplete }) {
   const timerRef      = useRef(null);
   const snapTimerRef  = useRef(null);
   const snapScoresRef = useRef([]);
+  const geoVerifiedRef = useRef(false); // true quando GPS post ha già confermato la posizione
   const maxSec        = enigma.recordingSeconds || 120;
 
   // Open camera immediately on mount
@@ -6022,6 +6023,18 @@ function PlayerGameView({ game, onBack }) {
 
     const coords = getCoords();
 
+    // GPS già verificato nella fase post precedente — sblocca subito
+    if (geoVerifiedRef.current) {
+      geoVerifiedRef.current = false; // reset per enigmi successivi
+      unlockedRef.current = true;
+      setUnlockedState(true);
+      setGeoStatus("near");
+      setDistance(null);
+      setEnigmaStartTime(Date.now());
+      setTimerExpired(false);
+      return;
+    }
+
     // No GPS coordinates configured for this enigma — unlock immediately, skip GPS entirely
     if (!coords) {
       unlockedRef.current = true;
@@ -6105,12 +6118,13 @@ function PlayerGameView({ game, onBack }) {
     }
   };
 
-  const nextEnigma = async () => {
+  const nextEnigma = async (gpsAlreadyVerified = false) => {
     stopGeo();
     unlockedRef.current = false;
     setUnlockedState(false);
     setDistance(null);
     setGeoStatus("idle");
+    geoVerifiedRef.current = gpsAlreadyVerified; // se GPS post ha già confermato, salta il check
     if (isLast) { setPhase("complete"); }
     else {
       setEnigmaIdx((i) => i + 1);
@@ -6885,7 +6899,7 @@ function PlayerGameView({ game, onBack }) {
                       className="btn-gold"
                       style={{ ...styles.btnPrimary, padding: "14px 36px", fontSize: "16px",
                         background: "linear-gradient(135deg,#2ed573,#27ae60)", borderColor: "#2ed573" }}
-                      onClick={nextEnigma}
+                      onClick={() => nextEnigma(true)}
                     >
                       🔓 SBLOCCA ENIGMA
                     </button>

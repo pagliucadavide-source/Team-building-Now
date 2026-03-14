@@ -5876,11 +5876,7 @@ function PlayerGameView({ game, onBack }) {
 
     if (dm <= GEO_RADIUS) {
       if (!unlockedRef.current) {
-        unlockedRef.current = true;
-        setUnlockedState(true);
-        setGeoStatus("near");
-        setEnigmaStartTime(Date.now());
-        setTimerExpired(false);
+        setGeoStatus("near");  // solo segnala vicinanza, NON sblocca
       }
     } else {
       if (!unlockedRef.current) {

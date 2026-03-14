@@ -6018,11 +6018,7 @@ function PlayerGameView({ game, onBack }) {
   // ── Polling progresso condiviso ──────────────────────────────────────────
   // Se un compagno di squadra ha risolto l'enigma con lo stesso codice,
   // questo dispositivo avanza automaticamente alla stessa posizione
-  useEffect(() => {
-    if (phase === "complete" || phase === "cinematic" || phase === "intro") return;
-    const progressKey = `progress:${game.id}:${playerCode}`;
-    return () => clearInterval(poll);
-  }, [phase, enigmaIdx, playerCode, game.id]);
+
 
   useEffect(() => {
     if (phase === "complete" || phase === "cinematic" || phase === "intro") return;
